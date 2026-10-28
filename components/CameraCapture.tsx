@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import type { PhotoboothTemplate } from "@/lib/photobooth";
+import { getCellAspect } from "@/lib/photobooth";
 import type { Dict } from "@/lib/i18n";
+import PhotoCropper from "@/components/PhotoCropper";
 
 interface Props {
   t: Dict;
@@ -118,18 +120,57 @@ export default function CameraCapture({ t, template, onDone, onBack }: Props) {
     setPhotos((prev) => prev.slice(0, -1));
   }, [isShooting, photos.length]);
 
-  const handleUpload = useCallback(async (files: FileList | null) => {
-    if (!files) return;
-    const picked = Array.from(files).slice(0, template.shots - photos.length);
-    const dataUrls = await Promise.all(picked.map((file) => new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.readAsDataURL(file);
-    })));
-    const next = [...photos, ...dataUrls];
+  // ครอปรูปอัปโหลดทีละไฟล์ก่อนวางลงช่อง: เปิดไฟล์แรกขึ้นมาให้ครอปก่อน
+  // ไฟล์ที่เหลือรอคิวอยู่ด้านหลัง (กรอบครอป = สัดส่วนช่องรูปช็อตนั้นพอดี)
+  const [cropFile, setCropFile] = useState<{ file: File; url: string } | null>(null);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+
+  const openNextCrop = useCallback((queue: File[]) => {
+    if (queue.length === 0) {
+      setCropFile(null);
+      setCropQueue([]);
+      return;
+    }
+    const [next, ...rest] = queue;
+    setCropQueue(rest);
+    setCropFile({ file: next, url: URL.createObjectURL(next) });
+  }, []);
+
+  /** เพิ่มรูปที่ผ่านการครอปแล้วลงช็อตถัดไป แล้วเปิดไฟล์คิวถัดไป (ถ้ามี) */
+  const appendCropped = useCallback((dataUrl: string) => {
+    const next = [...photos, dataUrl];
     setPhotos(next);
-    if (next.length >= template.shots) onDone(next);
-  }, [photos, template.shots, onDone]);
+    if (cropFile) URL.revokeObjectURL(cropFile.url);
+    if (next.length >= template.shots) {
+      setCropFile(null);
+      setCropQueue([]);
+      onDone(next);
+    } else {
+      openNextCrop(cropQueue);
+    }
+  }, [photos, cropFile, cropQueue, template.shots, onDone, openNextCrop]);
+
+  /** ใช้รูปเต็มโดยไม่ครอป (ทางลัดสำหรับคนอัปโหลดหลายรูป) */
+  const useOriginalFile = useCallback(() => {
+    if (!cropFile) return;
+    const reader = new FileReader();
+    reader.onload = () => appendCropped(String(reader.result));
+    reader.readAsDataURL(cropFile.file);
+  }, [cropFile, appendCropped]);
+
+  /** ข้ามไฟล์นี้ (ไม่เพิ่มรูป) แล้วเปิดไฟล์คิวถัดไป */
+  const cancelCrop = useCallback(() => {
+    if (cropFile) URL.revokeObjectURL(cropFile.url);
+    openNextCrop(cropQueue);
+  }, [cropFile, cropQueue, openNextCrop]);
+
+  /** Fallback when there is no camera: upload photos from the device */
+  const handleUpload = useCallback((files: FileList | null) => {
+    if (!files || cropFile) return;
+    const picked = Array.from(files).slice(0, template.shots - photos.length);
+    if (picked.length === 0) return;
+    openNextCrop(picked);
+  }, [photos, template.shots, cropFile, openNextCrop]);
 
   const remaining = template.shots - photos.length;
 
@@ -186,6 +227,14 @@ export default function CameraCapture({ t, template, onDone, onBack }: Props) {
           <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleUpload(e.target.files); e.target.value = ""; }} />
         </label>
       </div>
+      {/* หน้าครอปรูปอัปโหลด — โผล่ทับจอกล้อง (กล้องยังค้างอยู่ข้างหลัง) */}
+      {cropFile && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-pink-50 px-4 py-6">
+          <div className="mx-auto w-full max-w-md">
+            <PhotoCropper t={t} file={cropFile.file} src={cropFile.url} aspect={getCellAspect(template, photos.length)} onConfirm={appendCropped} onUseOriginal={useOriginalFile} onCancel={cancelCrop} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

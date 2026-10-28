@@ -27,6 +27,13 @@ export interface Dict {
   changeTemplate: string;
   retakeLast: string;
   noCameraUpload: string;
+  cropTitle: string;
+  cropHint: string;
+  cropZoom: string;
+  cropConfirm: string;
+  cropUseOriginal: string;
+  cropCancel: string;
+  cropError: string;
   shotLabel: string;
   resultTitle: string;
   resultDesc: string;
@@ -109,6 +116,13 @@ export const translations: Record<Language, Dict> = {
     changeTemplate: "← Change template",
     retakeLast: "↺ Retake last shot",
     noCameraUpload: "Upload photos instead",
+    cropTitle: "Crop your photo",
+    cropHint: "Drag to move, pinch or slide to zoom — the frame matches the photo slot in your template.",
+    cropZoom: "Zoom",
+    cropConfirm: "Use this crop",
+    cropUseOriginal: "Use full photo without cropping",
+    cropCancel: "Cancel",
+    cropError: "Couldn't load this photo",
     shotLabel: "Shot",
     resultTitle: "3. Edit & download",
     resultDesc:
@@ -250,6 +264,13 @@ export const translations: Record<Language, Dict> = {
     changeTemplate: "← เปลี่ยนเทมเพลต",
     retakeLast: "↺ ถ่ายช็อตสุดท้ายใหม่",
     noCameraUpload: "อัปโหลดรูปจากเครื่องแทน",
+    cropTitle: "ครอปรูปของคุณ",
+    cropHint: "ลากเพื่อเลื่อนรูป บีบหรือเลื่อนสไลด์เพื่อซูม — กรอบตรงกับช่องรูปของเทมเพลตพอดี",
+    cropZoom: "ซูม",
+    cropConfirm: "ใช้รูปที่ครอป",
+    cropUseOriginal: "ใช้รูปเต็มโดยไม่ครอป",
+    cropCancel: "ยกเลิก",
+    cropError: "โหลดรูปนี้ไม่ได้",
     shotLabel: "ช็อตที่",
     resultTitle: "3. แต่งรูป & ดาวน์โหลด",
     resultDesc: "ลองเปลี่ยนฟิลเตอร์กับสีกรอบได้เลย พรีวิวจะอัปเดตทันที",

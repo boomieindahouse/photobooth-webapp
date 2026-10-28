@@ -1131,6 +1131,27 @@ export function getTextAnchor(template: PhotoboothTemplate): {
   };
 }
 
+/**
+ * สัดส่วนกว้าง:สูงของช่องรูปช็อตที่ index — ใช้ตั้งกรอบครอปตอนอัปโหลดรูป
+ * ให้กรอบครอปเท่ากับช่องที่จะวางรูปพอดี รูปที่ครอปแล้วจึงไม่ถูกตัดซ้ำตอน export
+ * - cellsPx (เทมเพลตเฟรม): ใช้ช่องจริงตาม index
+ * - grid: คำนวณ unit จากสูตรเดียวกับ composeStrip แล้ววัดช่องของช็อตนั้น
+ */
+export function getCellAspect(template: PhotoboothTemplate, index: number): number {
+  if (template.cellsPx) {
+    const r = template.cellsPx[Math.min(index, template.cellsPx.length - 1)];
+    if (r && r.h > 0) return r.w / r.h;
+  }
+  const photoAreaWidth = template.stripWidth - template.padding * 2;
+  const photoAreaHeight = template.stripHeight - template.padding * 2 - template.footerHeight;
+  const unitW = (photoAreaWidth - template.gap * (template.cols - 1)) / template.cols;
+  const unitH = (photoAreaHeight - template.gap * (template.rows - 1)) / template.rows;
+  const cells = photoCells(template);
+  const cell = cells[Math.min(index, cells.length - 1)] ?? { col: 0, row: 0 };
+  const { w, h } = cellRect(template, cell, unitW, unitH);
+  return h > 0 ? w / h : 1;
+}
+
 export function isDarkHexPublic(hex: string): boolean {
   return isDarkHex(hex);
 }

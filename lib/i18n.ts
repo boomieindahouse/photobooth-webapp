@@ -69,6 +69,7 @@ export interface Dict {
   addSticker: string;
   stickerHint: string;
   stickerSizeTitle: string;
+  stickerRotateTitle: string;
   removeSticker: string;
   textColorTitle: string;
   textColorAuto: string;
@@ -173,20 +174,20 @@ export const translations: Record<Language, Dict> = {
     categoryNames: {
       minimal: "Minimal",
       dark: "Dark Booth",
-      festival: "Festival",
-      meme: "Meme Pets",
       polaroid: "Polaroid",
       y2k: "Y2K",
       kawaii: "Kawaii",
+      story: "Story",
+      photocard: "Photocard",
     },
     categoryDesc: {
       minimal: "Clean, cute, pastel strips",
       dark: "Real booth prints with a black frame",
-      festival: "Seasonal frames for every occasion",
-      meme: "Silly shots with your dog or cat",
       polaroid: "Big photo + space for your own caption",
       y2k: "Bold Y2K strips in black and white",
       kawaii: "Cute doodle grids with 6 shots",
+      story: "Tall grid story frame with 3 shots",
+      photocard: "Checker photocard frame with 6 shots",
     },
     categoryTitle: "Choose a category",
     categoryDescText: "Pick a style first — then choose a template inside it.",
@@ -207,8 +208,9 @@ export const translations: Record<Language, Dict> = {
     stickerTitle: "Emoji stickers",
     stickerPlaceholder: "Type an emoji from your keyboard…",
     addSticker: "Add",
-    stickerHint: "Tap a sticker on the photo to select it, drag to move it, pinch with two fingers to resize.",
+    stickerHint: "Tap a sticker on the photo to select it, drag to move it, pinch with two fingers to resize and rotate. One finger on the sticker and the other anywhere on the photo works too. Tap × on a selected sticker to remove it.",
     stickerSizeTitle: "Sticker size",
+    stickerRotateTitle: "Sticker rotation",
     removeSticker: "Remove selected sticker",
     textColorTitle: "Text color",
     textColorAuto: "Auto",
@@ -310,20 +312,20 @@ export const translations: Record<Language, Dict> = {
     categoryNames: {
       minimal: "มินิมอล",
       dark: "ตู้ดำคลาสสิก",
-      festival: "เทศกาล",
-      meme: "มีมหมาแมว",
       polaroid: "โพลารอยด์",
       y2k: "Y2K",
       kawaii: "คาวาอี้",
+      story: "สตอรี่",
+      photocard: "โฟโต้การ์ด",
     },
     categoryDesc: {
       minimal: "แถบเรียบ ๆ น่ารัก โทนพาสเทล",
       dark: "งานพิมพ์ตู้จริง กรอบดำ",
-      festival: "กรอบตามเทศกาลต่าง ๆ",
-      meme: "ถ่ายตลก ๆ กับหมาแมว",
       polaroid: "รูปใหญ่ + ช่องว่างเขียนข้อความเอง",
       y2k: "แถบสไตล์ Y2K สีดำและขาว",
       kawaii: "กรอบลายดูเดิลน่ารัก ถ่ายได้ 6 ช็อต",
+      story: "กรอบสตอรี่แนวตั้งลายตาราง ถ่ายได้ 3 ช็อต",
+      photocard: "กรอบโฟโต้การ์ดลายตาราง ถ่ายได้ 6 ช็อต",
     },
     categoryTitle: "เลือกหมวดหมู่",
     categoryDescText: "เลือกสไตล์ก่อน แล้วค่อยเลือกเทมเพลตข้างในหมวดนั้น",
@@ -344,8 +346,9 @@ export const translations: Record<Language, Dict> = {
     stickerTitle: "สติกเกอร์อีโมจิ",
     stickerPlaceholder: "พิมพ์อีโมจิจากคีย์บอร์ดเครื่อง…",
     addSticker: "เพิ่ม",
-    stickerHint: "แตะสติกเกอร์บนรูปเพื่อเลือก ลากเพื่อย้ายตำแหน่ง ใช้สองนิ้วบีบเพื่อปรับขนาด",
+    stickerHint: "แตะสติกเกอร์บนรูปเพื่อเลือก ลากเพื่อย้ายตำแหน่ง ใช้สองนิ้วบีบเพื่อปรับขนาดและหมุน นิ้วนึงอยู่บนสติกเกอร์ อีกนิ้วแตะตรงไหนของรูปก็ได้ แตะ × ที่สติกเกอร์ที่เลือกเพื่อลบ",
     stickerSizeTitle: "ขนาดสติกเกอร์",
+    stickerRotateTitle: "หมุนสติกเกอร์",
     removeSticker: "ลบสติกเกอร์ที่เลือก",
     textColorTitle: "สีข้อความ",
     textColorAuto: "Auto",

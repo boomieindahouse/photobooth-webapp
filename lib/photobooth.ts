@@ -1,11 +1,11 @@
 export type TemplateCategory =
   | "minimal"
   | "dark"
-  | "festival"
-  | "meme"
   | "polaroid"
   | "y2k"
-  | "kawaii";
+  | "kawaii"
+  | "story"
+  | "photocard";
 
 export interface TemplateCell {
   col: number;
@@ -90,11 +90,11 @@ export interface FrameColor {
 export const CATEGORIES: TemplateCategory[] = [
   "minimal",
   "dark",
-  "festival",
-  "meme",
   "polaroid",
   "y2k",
   "kawaii",
+  "story",
+  "photocard",
 ];
 
 /**
@@ -408,180 +408,6 @@ const DARK: PhotoboothTemplate[] = [
 ];
 
 /**
- * ---------- Festival: เลย์เอาต์เดิมในกรอบธีมเทศกาล ----------
- * (สติกเกอร์ตกแต่งเทศกาล เช่น หมวกซานต้า/ฟักทอง จะเป็นขั้นถัดไป
- *  ตอนนี้หมวดนี้คือเทมเพลตกรอบสีเทศกาลที่เลือกใช้ได้ทันที)
- */
-const FESTIVAL: PhotoboothTemplate[] = [
-  {
-    id: "christmas-strip",
-    name: "Christmas Strip",
-    desc: "4-shot strip in a festive red frame",
-    category: "festival",
-    shots: 4,
-    cols: 1,
-    rows: 4,
-    stripWidth: 600,
-    stripHeight: 1784,
-    gap: 16,
-    padding: 24,
-    footerHeight: 80,
-    defaultFrameId: "festive-red",
-  },
-  {
-    id: "valentine-duo",
-    name: "Valentine Duo",
-    desc: "2 wide shots in a blush pink frame",
-    category: "festival",
-    shots: 2,
-    cols: 2,
-    rows: 1,
-    stripWidth: 1200,
-    stripHeight: 554,
-    gap: 16,
-    padding: 24,
-    footerHeight: 80,
-    defaultFrameId: "blush",
-  },
-  {
-    id: "halloween-grid",
-    name: "Halloween Grid",
-    desc: "4 shots in a 2x2 grid, black + orange frame feel",
-    category: "festival",
-    shots: 4,
-    cols: 2,
-    rows: 2,
-    stripWidth: 900,
-    stripHeight: 770,
-    gap: 16,
-    padding: 24,
-    footerHeight: 80,
-    defaultFrameId: "black",
-  },
-  {
-    id: "newyear-feature",
-    name: "New Year Feature",
-    desc: "Layout E style in a gold frame — celebrate the new year",
-    category: "festival",
-    shots: 4,
-    cols: 3,
-    rows: 2,
-    stripWidth: 1200,
-    stripHeight: 800,
-    gap: 16,
-    padding: 24,
-    footerHeight: 0,
-    cells: [
-      { col: 0, row: 0 },
-      { col: 0, row: 1 },
-      { col: 1, row: 1 },
-      { col: 2, row: 1 },
-    ],
-    panel: { col: 1, row: 0, colSpan: 2 },
-    defaultFrameId: "gold",
-  },
-  {
-    id: "songkran-trio",
-    name: "Songkran Trio",
-    desc: "3-shot strip in a splash blue frame",
-    category: "festival",
-    shots: 3,
-    cols: 1,
-    rows: 3,
-    stripWidth: 600,
-    stripHeight: 1402,
-    gap: 16,
-    padding: 24,
-    footerHeight: 80,
-    defaultFrameId: "sky",
-  },
-];
-
-/** ---------- Meme Pets: เลย์เอาต์สำหรับถ่ายกับหมาแมว ---------- */
-const MEME: PhotoboothTemplate[] = [
-  {
-    id: "pet-strip",
-    name: "Pet Strip",
-    desc: "4-shot strip for you + your dog or cat",
-    category: "meme",
-    shots: 4,
-    cols: 1,
-    rows: 4,
-    stripWidth: 600,
-    stripHeight: 1784,
-    gap: 16,
-    padding: 24,
-    footerHeight: 80,
-    defaultFrameId: "cream",
-  },
-  {
-    id: "pet-duo",
-    name: "Pet Duo",
-    desc: "2 wide shots — you and your pet side by side",
-    category: "meme",
-    shots: 2,
-    cols: 2,
-    rows: 1,
-    stripWidth: 1200,
-    stripHeight: 554,
-    gap: 16,
-    padding: 24,
-    footerHeight: 80,
-    defaultFrameId: "cream",
-  },
-  {
-    id: "pet-grid",
-    name: "Pet Grid",
-    desc: "4 shots in a 2x2 grid — every silly face counts",
-    category: "meme",
-    shots: 4,
-    cols: 2,
-    rows: 2,
-    stripWidth: 900,
-    stripHeight: 770,
-    gap: 16,
-    padding: 24,
-    footerHeight: 80,
-    defaultFrameId: "mint",
-  },
-  {
-    id: "pet-trio-panel",
-    name: "Pet Trio Panel",
-    desc: "Layout H style — 3 shots + a panel for your pet's name",
-    category: "meme",
-    shots: 3,
-    cols: 2,
-    rows: 2,
-    stripWidth: 1200,
-    stripHeight: 800,
-    gap: 16,
-    padding: 24,
-    footerHeight: 0,
-    cells: [
-      { col: 0, row: 0 },
-      { col: 0, row: 1 },
-      { col: 1, row: 1 },
-    ],
-    panel: { col: 1, row: 0 },
-    defaultFrameId: "lavender",
-  },
-  {
-    id: "pet-single",
-    name: "Pet Single",
-    desc: "One big shot — your pet is the star",
-    category: "meme",
-    shots: 1,
-    cols: 1,
-    rows: 1,
-    stripWidth: 1200,
-    stripHeight: 800,
-    gap: 16,
-    padding: 24,
-    footerHeight: 80,
-    defaultFrameId: "blush",
-  },
-];
-
 /** ---------- Polaroid: รูปใหญ่ + ช่องว่างด้านล่างสำหรับเขียนข้อความ ---------- */
 const POLAROID: PhotoboothTemplate[] = [
   {
@@ -796,14 +622,56 @@ const KAWAII: PhotoboothTemplate[] = [
   },
 ];
 
+/** ---------- Story: กรอบสตอรี่ลายตาราง + เทปแปะ (PNG โปร่งใส + cellsPx) ---------- */
+const STORY: PhotoboothTemplate[] = [
+  {
+    id: "story-collage",
+    name: "Story Collage",
+    desc: "Grid story frame with 3 shots",
+    category: "story",
+    shots: 3,
+    cols: 1,
+    rows: 3,
+    stripWidth: 1080,
+    stripHeight: 1920,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/story-collage.png",
+    cellsPx: [{ x: 317, y: 244, w: 446, h: 446 }, { x: 318, y: 767, w: 446, h: 446 }, { x: 319, y: 1291, w: 446, h: 446 }],
+  },
+];
+
+/** ---------- Photocard: กรอบโฟโต้การ์ดลายตาราง BYS (PNG โปร่งใส + cellsPx) ---------- */
+const PHOTOCARD: PhotoboothTemplate[] = [
+  {
+    id: "bys-photocard",
+    name: "BYS Photocard",
+    desc: "Checker photocard frame with 6 shots",
+    category: "photocard",
+    shots: 6,
+    cols: 3,
+    rows: 2,
+    stripWidth: 1200,
+    stripHeight: 960,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/bys-photocard.png",
+    cellsPx: [{ x: 83, y: 133, w: 233, h: 316 }, { x: 483, y: 133, w: 233, h: 316 }, { x: 883, y: 133, w: 233, h: 316 }, { x: 83, y: 513, w: 233, h: 316 }, { x: 483, y: 513, w: 233, h: 316 }, { x: 883, y: 513, w: 233, h: 316 }],
+  },
+];
+
 export const TEMPLATES: PhotoboothTemplate[] = [
   ...MINIMAL,
   ...DARK,
-  ...FESTIVAL,
-  ...MEME,
   ...POLAROID,
   ...Y2K,
   ...KAWAII,
+  ...STORY,
+  ...PHOTOCARD,
 ];
 
 export const FILTERS: PhotoFilter[] = [
@@ -1061,13 +929,15 @@ function applyFilter(
 }
 
 /** สติกเกอร์: x/y เป็นสัดส่วน 0-1 ของภาพ, size เป็น px ในพิกัดภาพ
- *  emoji = สติกเกอร์ตัวอักษร, image = สติกเกอร์รูปภาพ (URL ใน public/) */
+ *  emoji = สติกเกอร์ตัวอักษร, image = สติกเกอร์รูปภาพ (URL ใน public/)
+ *  rotation = องศาที่หมุน (0 = ไม่หมุน, หมุนตามเข็มนาฬิกาเป็นบวก) */
 export interface EmojiSticker {
   emoji: string;
   x: number;
   y: number;
   size: number;
   image?: string;
+  rotation?: number;
 }
 
 export interface ComposeOptions {
@@ -1360,27 +1230,34 @@ export async function composeStrip({
 
   // สติกเกอร์วาดทับสุด — อีโมจิใช้ฟอนต์อีโมจิของเครื่อง
   // จะได้เป็นสีเหมือนบนจอ, รูปภาพวาดแบบคงสัดส่วนในกล่อง size x size
+  // rotation หมุนรอบจุดกลางสติกเกอร์ (เหมือนที่เห็นบนพรีวิว)
   if (stickers.length > 0) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const sticker of stickers) {
-      const size = Math.max(20, Math.min(400, sticker.size));
+      const size = Math.max(12, Math.min(400, sticker.size));
       const cx = Math.max(0, Math.min(1, sticker.x)) * template.stripWidth;
       const cy = Math.max(0, Math.min(1, sticker.y)) * template.stripHeight;
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (sticker.rotation) {
+        ctx.rotate((sticker.rotation * Math.PI) / 180);
+      }
       if (sticker.image) {
         try {
           const img = await loadImage(sticker.image);
           const scale = size / Math.max(img.width, img.height);
           const w = img.width * scale;
           const h = img.height * scale;
-          ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+          ctx.drawImage(img, -w / 2, -h / 2, w, h);
         } catch {
           /* รูปโหลดไม่ได้ — ข้ามสติกเกอร์ตัวนั้นไป */
         }
       } else {
         ctx.font = `${size}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-        ctx.fillText(sticker.emoji, cx, cy);
+        ctx.fillText(sticker.emoji, 0, 0);
       }
+      ctx.restore();
     }
   }
 

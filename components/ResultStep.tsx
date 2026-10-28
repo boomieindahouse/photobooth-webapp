@@ -162,14 +162,18 @@ export default function ResultStep({
     null,
   );
   const [stickerInput, setStickerInput] = useState("");
-  // สถานะท่าทางของสติกเกอร์ที่กำลังลาก/บีบอยู่ (1 นิ้ว = ย้าย, 2 นิ้ว = บีบปรับขนาด)
+  // สถานะท่าทางของสติกเกอร์ที่กำลังลาก/บีบอยู่ (1 นิ้ว = ย้าย,
+  // 2 นิ้ว = บีบปรับขนาด + หมุน; นิ้วที่สองแตะตรงไหนของพรีวิวก็ได้
+  // ไม่ต้องอยู่ในกรอบสติกเกอร์ — handler ผูกไว้ที่กล่องพรีวิวทั้งกล่อง)
   const stickerGestureRef = useRef<{
     id: string;
     pointers: Map<number, { x: number; y: number }>;
     startX: number;
     startY: number;
     startSize: number;
+    startRotation: number;
     startDistance: number;
+    startAngle: number;
     startMidX: number;
     startMidY: number;
   } | null>(null);
@@ -226,12 +230,13 @@ export default function ResultStep({
       textOffsetX: textOffset.x,
       textOffsetY: textOffset.y,
       textColor: textColorChoice === "auto" ? null : textColorChoice,
-      stickers: stickers.map(({ emoji, image, x, y, size }) => ({
+      stickers: stickers.map(({ emoji, image, x, y, size, rotation }) => ({
         emoji,
         image,
         x,
         y,
         size,
+        rotation,
       })),
     });
 
@@ -323,61 +328,80 @@ export default function ResultStep({
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setStickers((prev) => [
       ...prev,
-      { id, emoji, image, x: 0.5, y: 0.5, size: 90 },
+      { id, emoji, image, x: 0.5, y: 0.5, size: 90, rotation: 0 },
     ]);
     setSelectedStickerId(id);
   };
 
   const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
-  const handleStickerPointerDown = (
-    e: React.PointerEvent,
-    id: string,
-  ) => {
-    setSelectedStickerId(id);
-    const img = imgRef.current;
-    const current = stickers.find((s) => s.id === id);
-    if (!img || !current) return;
-    const gesture = stickerGestureRef.current;
-    if (gesture && gesture.id === id) {
-      gesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      // นิ้วที่สองแตะเข้ามา: ตั้งจุดเริ่มต้นใหม่จากตำแหน่ง/ขนาดปัจจุบัน
-      // แล้วเริ่มวัดระยะบีบจากตรงนั้น
-      if (gesture.pointers.size === 2) {
-        const pts = [...gesture.pointers.values()];
-        gesture.startX = current.x;
-        gesture.startY = current.y;
-        gesture.startSize = current.size;
-        gesture.startDistance = Math.hypot(
-          pts[0].x - pts[1].x,
-          pts[0].y - pts[1].y,
-        );
-        gesture.startMidX = (pts[0].x + pts[1].x) / 2;
-        gesture.startMidY = (pts[0].y + pts[1].y) / 2;
-      }
-    } else {
-      stickerGestureRef.current = {
-        id,
-        pointers: new Map([[e.pointerId, { x: e.clientX, y: e.clientY }]]),
-        startX: current.x,
-        startY: current.y,
-        startSize: current.size,
-        startDistance: 0,
-        startMidX: e.clientX,
-        startMidY: e.clientY,
-      };
-    }
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  // นิ้วที่สองเข้ามาร่วมบีบ: ตั้งจุดเริ่มต้นใหม่จากค่าปัจจุบันของสติกเกอร์
+  // แล้วเริ่มวัดระยะห่างกับมุมจากตำแหน่งสองนิ้วตรงนั้น
+  const reanchorPinch = (gesture: NonNullable<typeof stickerGestureRef.current>) => {
+    const current = stickers.find((s) => s.id === gesture.id);
+    const pts = [...gesture.pointers.values()];
+    if (!current || pts.length < 2) return;
+    gesture.startX = current.x;
+    gesture.startY = current.y;
+    gesture.startSize = current.size;
+    gesture.startRotation = current.rotation ?? 0;
+    gesture.startDistance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    gesture.startAngle =
+      (Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x) * 180) / Math.PI;
+    gesture.startMidX = (pts[0].x + pts[1].x) / 2;
+    gesture.startMidY = (pts[0].y + pts[1].y) / 2;
   };
 
-  const handleStickerPointerMove = (
-    e: React.PointerEvent,
-    id: string,
-  ) => {
+  // handler ผูกที่กล่องพรีวิวทั้งกล่อง (ไม่ใช่ที่ตัวสติกเกอร์) — นิ้วที่สอง
+  // จึงแตะตรงไหนของรูปก็ได้ ไม่ต้องอยู่ในกรอบสติกเกอร์
+  const handleStickerPointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    const stickerEl = target.closest?.("[data-sticker-id]");
+    const id = stickerEl?.getAttribute("data-sticker-id") ?? null;
+    const img = imgRef.current;
+    if (!img) return;
+    const gesture = stickerGestureRef.current;
+    if (id) {
+      setSelectedStickerId(id);
+      const current = stickers.find((s) => s.id === id);
+      if (!current) return;
+      if (gesture && gesture.id === id) {
+        gesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (gesture.pointers.size === 2) reanchorPinch(gesture);
+      } else {
+        stickerGestureRef.current = {
+          id,
+          pointers: new Map([[e.pointerId, { x: e.clientX, y: e.clientY }]]),
+          startX: current.x,
+          startY: current.y,
+          startSize: current.size,
+          startRotation: current.rotation ?? 0,
+          startDistance: 0,
+          startAngle: 0,
+          startMidX: e.clientX,
+          startMidY: e.clientY,
+        };
+      }
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } else if (
+      gesture &&
+      gesture.pointers.size === 1 &&
+      !target.closest?.("[data-text-overlay]")
+    ) {
+      // กำลังลากสติกเกอร์อยู่ 1 นิ้ว แล้วนิ้วที่สองแตะที่อื่นของรูป:
+      // เข้าร่วมเป็นการบีบ/หมุนทันที (แบบสตอรี่ไอจี) — จาก 1 นิ้วเป็น 2 นิ้วแน่ ๆ
+      gesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      reanchorPinch(gesture);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handleStickerPointerMove = (e: React.PointerEvent) => {
     const gesture = stickerGestureRef.current;
     const img = imgRef.current;
-    if (!gesture || gesture.id !== id || !img) return;
+    if (!gesture || !img) return;
     if (!gesture.pointers.has(e.pointerId)) return;
+    const id = gesture.id;
     gesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const rect = img.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
@@ -390,35 +414,42 @@ export default function ResultStep({
         prev.map((s) =>
           s.id === id
             ? {
-              ...s,
-              x: clamp01(gesture.startX + dx),
-              y: clamp01(gesture.startY + dy),
-            }
+                ...s,
+                x: clamp01(gesture.startX + dx),
+                y: clamp01(gesture.startY + dy),
+              }
             : s,
         ),
       );
     } else if (pts.length >= 2) {
-      // 2 นิ้ว: บีบปรับขนาดตามสัดส่วนระยะห่างนิ้ว + ขยับตามจุดกลางนิ้ว
+      // 2 นิ้ว: บีบปรับขนาดตามสัดส่วนระยะห่างนิ้ว + หมุนตามมุมระหว่างนิ้ว
+      // + ขยับตามจุดกลางนิ้ว
       const [p1, p2] = pts;
       const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
       const midX = (p1.x + p2.x) / 2;
       const midY = (p1.y + p2.y) / 2;
+      const angle =
+        (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI;
       if (gesture.startDistance > 0) {
         const size = Math.max(
-          30,
+          12,
           Math.min(300, Math.round(gesture.startSize * (dist / gesture.startDistance))),
         );
+        // องศาเก็บไว้ช่วง -180..180 จะได้ตรงกับสไลด์หมุน
+        const rotation =
+          ((gesture.startRotation + (angle - gesture.startAngle) + 180) % 360 + 360) % 360 - 180;
         const dx = (midX - gesture.startMidX) / rect.width;
         const dy = (midY - gesture.startMidY) / rect.height;
         setStickers((prev) =>
           prev.map((s) =>
             s.id === id
               ? {
-                ...s,
-                x: clamp01(gesture.startX + dx),
-                y: clamp01(gesture.startY + dy),
-                size,
-              }
+                  ...s,
+                  x: clamp01(gesture.startX + dx),
+                  y: clamp01(gesture.startY + dy),
+                  size,
+                  rotation,
+                }
               : s,
           ),
         );
@@ -426,12 +457,10 @@ export default function ResultStep({
     }
   };
 
-  const handleStickerPointerUp = (
-    e: React.PointerEvent,
-    id: string,
-  ) => {
+  const handleStickerPointerUp = (e: React.PointerEvent) => {
     const gesture = stickerGestureRef.current;
-    if (!gesture || gesture.id !== id) return;
+    if (!gesture) return;
+    const id = gesture.id;
     gesture.pointers.delete(e.pointerId);
     if (gesture.pointers.size === 0) {
       stickerGestureRef.current = null;
@@ -443,6 +472,7 @@ export default function ResultStep({
         gesture.startX = current.x;
         gesture.startY = current.y;
         gesture.startSize = current.size;
+        gesture.startRotation = current.rotation ?? 0;
         gesture.startMidX = pt.x;
         gesture.startMidY = pt.y;
         gesture.startDistance = 0;
@@ -606,7 +636,16 @@ export default function ResultStep({
             <p className="py-16 text-sm text-pink-500">{t.composing}</p>
           )}
           {previewUrl && (
-            <div className="relative inline-block">
+            <div
+              className="relative inline-block"
+              onPointerDown={handleStickerPointerDown}
+              onPointerMove={handleStickerPointerMove}
+              onPointerUp={handleStickerPointerUp}
+              onPointerCancel={handleStickerPointerUp}
+              // pan-y = เลื่อนหน้าขึ้นลงด้วยนิ้วเดียวได้ตามปกติ แต่ห้ามเบราว์เซอร์
+              // pinch-zoom เอง — สองนิ้วจะได้ตกมาที่ handler บีบ/หมุนของเราแทน
+              style={{ touchAction: "pan-y" }}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 ref={imgRef}
@@ -625,6 +664,7 @@ export default function ResultStep({
                 ตำแหน่งที่ลากจะถูกส่งไปวาดตอน export ผ่าน textOffset */}
               {showOverlay && (
                 <div
+                  data-text-overlay="true"
                   role="button"
                   aria-label={t.textPositionTitle}
                   onPointerDown={handleDragStart}
@@ -672,20 +712,15 @@ export default function ResultStep({
                 return (
                   <div
                     key={sticker.id}
+                    data-sticker-id={sticker.id}
                     role="button"
                     aria-label={sticker.emoji || "sticker"}
-                    onPointerDown={(e) => handleStickerPointerDown(e, sticker.id)}
-                    onPointerMove={(e) => handleStickerPointerMove(e, sticker.id)}
-                    onPointerUp={(e) => handleStickerPointerUp(e, sticker.id)}
-                    onPointerCancel={(e) =>
-                      handleStickerPointerUp(e, sticker.id)
-                    }
                     className={`absolute z-20 cursor-grab rounded-full text-center leading-none active:cursor-grabbing ${selected ? "ring-2 ring-pink-400 ring-offset-1" : ""
                       }`}
                     style={{
                       left: `${sticker.x * 100}%`,
                       top: `${sticker.y * 100}%`,
-                      transform: "translate(-50%, -50%)",
+                      transform: `translate(-50%, -50%) rotate(${sticker.rotation ?? 0}deg)`,
                       fontSize: displaySize,
                       touchAction: "none",
                       userSelect: "none",
@@ -701,6 +736,23 @@ export default function ResultStep({
                       />
                     ) : (
                       sticker.emoji
+                    )}
+                    {/* ปุ่มลบตรงกรอบ — โผล่เฉพาะสติกเกอร์ที่เลือกอยู่ */}
+                    {selected && (
+                      <button
+                        type="button"
+                        aria-label={t.removeSticker}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          setStickers((prev) =>
+                            prev.filter((s) => s.id !== sticker.id),
+                          );
+                          setSelectedStickerId(null);
+                        }}
+                        className="absolute -right-2 -top-2 z-30 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-red-500 text-sm font-bold leading-none text-white shadow-md"
+                      >
+                        ×
+                      </button>
                     )}
                   </div>
                 );
@@ -1180,7 +1232,7 @@ export default function ResultStep({
                 </span>
                 <input
                   type="range"
-                  min={30}
+                  min={12}
                   max={300}
                   step={5}
                   value={selectedSticker.size}
@@ -1198,6 +1250,33 @@ export default function ResultStep({
                 />
                 <span className="w-14 shrink-0 text-right text-sm text-gray-500">
                   {selectedSticker.size}px
+                </span>
+              </div>
+              {/* หมุนสติกเกอร์ — สำหรับเมาส์/คีย์บอร์ดที่บีบสองนิ้วไม่ได้ */}
+              <div className="mt-3 flex items-center gap-3">
+                <span className="shrink-0 text-sm font-medium text-gray-700">
+                  {t.stickerRotateTitle}
+                </span>
+                <input
+                  type="range"
+                  min={-180}
+                  max={180}
+                  step={5}
+                  value={selectedSticker.rotation ?? 0}
+                  onChange={(e) =>
+                    setStickers((prev) =>
+                      prev.map((s) =>
+                        s.id === selectedSticker.id
+                          ? { ...s, rotation: Number(e.target.value) }
+                          : s,
+                      ),
+                    )
+                  }
+                  className="flex-1 accent-pink-500"
+                  aria-label={t.stickerRotateTitle}
+                />
+                <span className="w-14 shrink-0 text-right text-sm text-gray-500">
+                  {selectedSticker.rotation ?? 0}°
                 </span>
               </div>
               <button

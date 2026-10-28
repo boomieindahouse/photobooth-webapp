@@ -138,21 +138,17 @@ export default function ResultStep({
   const [textOffset, setTextOffset] = useState({ x: 0, y: 0 });
   // สีข้อความที่ผู้ใช้เลือก — auto = ตามสีกรอบแบบเดิม
   const [textColorChoice, setTextColorChoice] = useState<string>("auto");
-  // เทมเพลตเฟรมสำเร็จรูป: เฟรมตายตัว ไม่มีข้อความ/สีกรอบให้ปรับ
+  // เทมเพลตเฟรมสำเร็จรูป: เฟรมตายตัว ไม่มีสีกรอบให้ปรับ
+  // แต่ข้อความปรับได้เหมือนเทมเพลตทั่วไป (วาดทับเฟรมตอน export)
   const isFrameTemplate = Boolean(template.frameOverlay);
   // Pills tabs ในขั้นตอนที่ 3 — ปรับทีละส่วน หน้าไม่ยาว
   type ResultTab = "filter" | "text" | "stickers";
   const [activeTab, setActiveTab] = useState<ResultTab>("filter");
-  const visibleTabs: { id: ResultTab; label: string }[] = isFrameTemplate
-    ? [
-      { id: "filter", label: t.tabFilterFrame },
-      { id: "stickers", label: t.tabStickers },
-    ]
-    : [
-      { id: "filter", label: t.tabFilterFrame },
-      { id: "text", label: t.tabTextFonts },
-      { id: "stickers", label: t.tabStickers },
-    ];
+  const visibleTabs: { id: ResultTab; label: string }[] = [
+    { id: "filter", label: t.tabFilterFrame },
+    { id: "text", label: t.tabTextFonts },
+    { id: "stickers", label: t.tabStickers },
+  ];
   const currentTab = visibleTabs.some((tb) => tb.id === activeTab)
     ? activeTab
     : visibleTabs[0].id;
@@ -260,7 +256,7 @@ export default function ResultStep({
       : trimmedText && includeDate
         ? `${trimmedText}  •  ${overlayDate}`
         : trimmedText || (includeDate ? overlayDate : "");
-  const showOverlay = !isFrameTemplate && overlayText !== "";
+  const showOverlay = overlayText !== "";
   const anchor = getTextAnchor(template);
   const effectiveTextSize = template.panel
     ? customFont
@@ -393,6 +389,9 @@ export default function ResultStep({
       gesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       reanchorPinch(gesture);
       e.currentTarget.setPointerCapture(e.pointerId);
+    } else if (!gesture) {
+      // แตะที่รูป (ไม่ใช่สติกเกอร์) = ยกเลิกการเลือกสติกเกอร์ กรอบหาย
+      setSelectedStickerId(null);
     }
   };
 
@@ -749,7 +748,7 @@ export default function ResultStep({
                           );
                           setSelectedStickerId(null);
                         }}
-                        className="absolute -right-2 -top-2 z-30 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-red-500 text-sm font-bold leading-none text-white shadow-md"
+                        className="absolute -right-2 -top-2 z-30 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-red-500 text-xs font-bold leading-none text-white shadow-md"
                       >
                         ×
                       </button>

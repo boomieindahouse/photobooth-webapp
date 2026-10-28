@@ -5,7 +5,8 @@ export type TemplateCategory =
   | "y2k"
   | "kawaii"
   | "story"
-  | "photocard";
+  | "photocard"
+  | "halloween";
 
 export interface TemplateCell {
   col: number;
@@ -95,6 +96,7 @@ export const CATEGORIES: TemplateCategory[] = [
   "kawaii",
   "story",
   "photocard",
+  "halloween",
 ];
 
 /**
@@ -664,6 +666,129 @@ const PHOTOCARD: PhotoboothTemplate[] = [
   },
 ];
 
+/** ---------- Halloween: การ์ดสตอรี่กะโหลก 4 แบบ + เฟรมฮาโลวีน 3 แบบ (PNG โปร่งใส + cellsPx) ---------- */
+const HALLOWEEN: PhotoboothTemplate[] = [
+  {
+    id: "halloween-night",
+    name: "Night Skull",
+    desc: "Skull story card with 1 shot",
+    category: "halloween",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 800,
+    stripHeight: 1247,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/hw-night.png",
+    cellsPx: [{ x: 1, y: 0, w: 797, h: 843 }],
+  },
+  {
+    id: "halloween-rock",
+    name: "Rock Skull",
+    desc: "Skull story card with 1 shot",
+    category: "halloween",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 800,
+    stripHeight: 1247,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/hw-rock.png",
+    cellsPx: [{ x: 1, y: 0, w: 591, h: 1247 }],
+  },
+  {
+    id: "halloween-two",
+    name: "Two Hearts",
+    desc: "Skull story card with 1 shot",
+    category: "halloween",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 800,
+    stripHeight: 1248,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/hw-two.png",
+    cellsPx: [{ x: 1, y: 413, w: 797, h: 772 }],
+  },
+  {
+    id: "halloween-nightlove",
+    name: "Night Love",
+    desc: "Skull story card with 1 shot",
+    category: "halloween",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 800,
+    stripHeight: 1248,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/hw-nightlove.png",
+    cellsPx: [{ x: 37, y: 0, w: 761, h: 1116 }],
+  },
+  {
+    id: "halloween-ghost",
+    name: "Halloween Ghost",
+    desc: "Spooky ghost frame with 1 shot",
+    category: "halloween",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 900,
+    stripHeight: 1463,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/hw-ghost.png",
+    cellsPx: [{ x: 72, y: 97, w: 651, h: 978 }],
+  },
+  {
+    id: "halloween-witch",
+    name: "Halloween Witch",
+    desc: "Spooky witch frame with 1 shot",
+    category: "halloween",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 900,
+    stripHeight: 1465,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/hw-witch.png",
+    cellsPx: [{ x: 74, y: 53, w: 746, h: 1035 }],
+  },
+  {
+    id: "halloween-pumpkin",
+    name: "Halloween Pumpkin",
+    desc: "Spooky pumpkin frame with 1 shot",
+    category: "halloween",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 900,
+    stripHeight: 1457,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    frameOverlay: "/frames/hw-pumpkin.png",
+    cellsPx: [{ x: 115, y: 62, w: 739, h: 978 }],
+  },
+];
+
 export const TEMPLATES: PhotoboothTemplate[] = [
   ...MINIMAL,
   ...DARK,
@@ -672,6 +797,7 @@ export const TEMPLATES: PhotoboothTemplate[] = [
   ...KAWAII,
   ...STORY,
   ...PHOTOCARD,
+  ...HALLOWEEN,
 ];
 
 export const FILTERS: PhotoFilter[] = [
@@ -975,11 +1101,19 @@ export interface ComposeOptions {
  * ใช้ทั้งตอน export และตอนวาดข้อความลากได้บนพรีวิวให้ตรงกัน
  * - panel: กลางช่อง panel
  * - caption/footer: กลางช่องท้ายภาพ
+ * - frameOverlay: กลางภาพ ห่างขอบล่าง 56px (เฟรมไม่มีช่องท้ายภาพแยก
+ *   ข้อความจึงวาดทับเฟรมตรงนี้ แล้วผู้ใช้ลากย้ายได้เอง)
  */
 export function getTextAnchor(template: PhotoboothTemplate): {
   x: number;
   y: number;
 } {
+  if (template.frameOverlay) {
+    return {
+      x: template.stripWidth / 2,
+      y: template.stripHeight - 56,
+    };
+  }
   if (template.panel) {
     const photoAreaWidth = template.stripWidth - template.padding * 2;
     const photoAreaHeight =
@@ -1210,6 +1344,22 @@ export async function composeStrip({
       lines.forEach((line, i) => {
         ctx.fillText(line, anchorX, startY + i * lineHeight);
       });
+    }
+  } else if (template.frameOverlay) {
+    // เทมเพลตเฟรมสำเร็จรูป: ข้อความวาดทับเฟรมที่จุด anchor ท้ายภาพ
+    // (วาดหลัง overlay จึงไม่ถูกเฟรมบัง; รูปแบบเดียวกับแถบท้ายภาพ
+    // ของเทมเพลตทั่วไป — ไม่ใส่ทั้งสองอย่าง = ไม่มีข้อความ)
+    if (customText || includeDate) {
+      await loadCustomFont(captionFontFamily, captionSize);
+      const body =
+        customText && includeDate
+          ? `${customText}  •  ${dateText}`
+          : customText || dateText;
+      ctx.fillStyle = textColor;
+      ctx.font = customFont ?? "600 26px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`♡  ${body}  ♡`, anchorX, anchorY);
     }
   } else if (template.footerHeight > 0) {
     // แถบท้ายภาพ: ข้อความที่ผู้ใช้พิมพ์ + วันที่ (ถ้าเลือกใส่)

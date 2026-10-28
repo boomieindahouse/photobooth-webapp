@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import {
   Caveat,
   Dancing_Script,
@@ -95,7 +96,10 @@ export default function RootLayout({
       lang="en"
       className={`${prompt.variable} ${mali.variable} ${caveat.variable} ${kalam.variable} ${patrickHand.variable} ${shadowsIntoLight.variable} ${dancingScript.variable} ${indieFlower.variable} ${itim.variable}`}
     >
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

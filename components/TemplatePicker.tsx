@@ -149,10 +149,12 @@ export default function TemplatePicker({ t, selected, onSelect }: Props) {
     const templates = TEMPLATES.filter((tpl) => tpl.category === category);
     return (
       <div>
+        {/* ปุ่มย้อนกลับต้องเห็นชัด — เดิมเป็นตัวหนังสือสีชมพูตัวเล็ก
+            กลมกลืนกับพื้นหลังจนหาไม่เจอ จึงทำเป็นปุ่มเต็มแถวสีม่วง */}
         <button
           type="button"
           onClick={() => setCategory(null)}
-          className="text-sm font-medium text-pink-500 hover:text-pink-600"
+          className="flex w-full items-center justify-center rounded-full bg-violet-400 py-3 text-base font-semibold text-white shadow-md shadow-violet-200 transition hover:bg-violet-500 active:scale-[0.98]"
         >
           {t.backToCategories}
         </button>

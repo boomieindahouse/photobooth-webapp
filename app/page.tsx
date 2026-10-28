@@ -38,8 +38,8 @@ export default function Home() {
       {/* Header + language switcher */}
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold text-pink-500">
-            ♡ photobooth
+          <h1 className="font-display text-3xl font-bold text-violet-400">
+            photobooth
           </h1>
           <p className="mt-1 text-sm text-gray-500">{t.tagline}</p>
         </div>

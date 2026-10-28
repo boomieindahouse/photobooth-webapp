@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Cropper from "react-easy-crop";
+import type { Area, Point } from "react-easy-crop";
 import type { Dict } from "@/lib/i18n";
 
 interface Props {
   t: Dict;
+  /** ไฟล์ต้นฉบับ (โหมดอัปโหลด) — ถ้าไม่มี (โหมดครอปซ้ำ) จะโหลดจาก src แทน */
   file: File | null;
   src: string;
   /** สัดส่วนกว้าง:สูงของช่องรูปที่จะวาง (กรอบครอปเท่านี้พอดี) */
@@ -15,37 +18,30 @@ interface Props {
 }
 
 const MAX_OUTPUT_SIDE = 1600;
-const MIN_SCALE = 1;
-const MAX_SCALE = 3;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 3;
 
 /**
  * ครอปรูปอัปโหลดก่อนวางลงช่องเทมเพลต — กรอบครอปมีสัดส่วนเท่าช่องรูปพอดี
- * วิธีใช้: นิ้วเดียวลากเลื่อนรูป, สองนิ้วบีบซูม, หรือเลื่อนสไลด์ซูม
+ * ท่าทางทั้งหมด (ลากเลื่อน, บีบซูม 2 นิ้ว, สไลด์ซูม) ใช้ react-easy-crop
+ * ซึ่งเป็น library ครอปยอดนิยมที่จัดการ gesture บนมือถือมาให้แล้ว
+ * (ของเดิมที่เขียน handler เองมีอาการซูมกระตุก/รูปไถลหนีนิ้ว)
  * รูปที่เห็นในกรอบ = รูปที่จะได้ (ไม่ถูกตัดซ้ำตอน export)
- * หมายเหตุ: รูปจากมือถือมักมี EXIF orientation จึงโหลดต้นฉบับด้วย
- * createImageBitmap({ imageOrientation: "from-image" }) เพื่อให้พิกัดครอป
- * ตรงกับรูปที่แสดง (เบราว์เซอร์แสดง <img> แบบหมุนตาม EXIF เหมือนกัน)
+ * หมายเหตุ: รูปจากมือถือมักมี EXIF orientation จึงโหลดต้นฉบับสำหรับ
+ * export ด้วย createImageBitmap({ imageOrientation: "from-image" })
+ * เพื่อให้พิกัดครอปจาก library ตรงกับรูปที่วาดออกมา
  */
 export default function PhotoCropper({ t, file, src, aspect, onConfirm, onUseOriginal, onCancel }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
-  const pinchRef = useRef<{ dist: number; midX: number; midY: number } | null>(null);
   const sourceRef = useRef<ImageBitmap | HTMLImageElement | null>(null);
+  const croppedAreaPixelsRef = useRef<Area | null>(null);
 
   // ขนาดรูปต้นฉบับหลังหมุนตาม EXIF (กว้าง x สูง, px)
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const [loadError, setLoadError] = useState(false);
-  // ขนาดกล่องครอปที่แสดงจริง (วัดจากจอ)
-  const [boxSize, setBoxSize] = useState({ w: 0, h: 0 });
-  const [scale, setScale] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  // ค่าล่าสุดสำหรับ handler ท่าทาง — pointermove หลายรอบอาจวิ่งก่อน React re-render ทำให้ closure ของ state เก่า (ซูมค้าง/กระตุก) จึงเก็บ scale/offset ใน ref เป็นค่าจริง แล้ว mirror ลง state เพื่อ render
-  const scaleRef = useRef(1);
-  const offsetRef = useRef({ x: 0, y: 0 });
-  const setScaleBoth = (s: number) => { scaleRef.current = s; setScale(s); };
-  const setOffsetBoth = (o: { x: number; y: number }) => { offsetRef.current = o; setOffset(o); };
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
 
-  // โหลดต้นฉบับแบบหมุนตาม EXIF; ถ้าไม่รองรับ ถอยไปใช้ <img> ธรรมดา
+  // โหลดต้นฉบับสำหรับ export แบบหมุนตาม EXIF; ถ้าไม่รองรับ ถอยไปใช้ <img>
   useEffect(() => {
     let cancelled = false;
     let bitmap: ImageBitmap | null = null;
@@ -82,114 +78,17 @@ export default function PhotoCropper({ t, file, src, aspect, onConfirm, onUseOri
       bitmap?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file]);
-
-  // วัดขนาดกล่องครอป (กว้างตามจอ, สูงตามสัดส่วน)
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 0) setBoxSize({ w: rect.width, h: rect.height });
-    };
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    window.addEventListener("resize", update);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-
-  // ขนาดรูปที่แสดง (cover กล่องครอปที่ scale 1) + กันเลื่อนจนเห็นขอบนอก
-  const disp =
-    imgSize && boxSize.w > 0
-      ? (() => {
-          const base = Math.max(boxSize.w / imgSize.w, boxSize.h / imgSize.h);
-          return { w: imgSize.w * base * scale, h: imgSize.h * base * scale, base };
-        })()
-      : null;
-
-  const clampOffset = (x: number, y: number, s: number) => {
-    if (!disp || !imgSize || boxSize.w === 0) return { x, y };
-    const base = Math.max(boxSize.w / imgSize.w, boxSize.h / imgSize.h);
-    const w = imgSize.w * base * s;
-    const h = imgSize.h * base * s;
-    return {
-      x: Math.max(-Math.max(0, (w - boxSize.w) / 2), Math.min(Math.max(0, (w - boxSize.w) / 2), x)),
-      y: Math.max(-Math.max(0, (h - boxSize.h) / 2), Math.min(Math.max(0, (h - boxSize.h) / 2), y)),
-    };
-  };
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointersRef.current.size === 2) {
-      const [a, b] = [...pointersRef.current.values()];
-      pinchRef.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), midX: (a.x + b.x) / 2, midY: (a.y + b.y) / 2 };
-    }
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    const pointers = pointersRef.current;
-    if (!pointers.has(e.pointerId)) return;
-    const prev = pointers.get(e.pointerId)!;
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size === 1) {
-      const dx = e.clientX - prev.x;
-      const dy = e.clientY - prev.y;
-      const o = offsetRef.current;
-      setOffsetBoth(clampOffset(o.x + dx, o.y + dy, scaleRef.current));
-    } else if (pointers.size === 2 && pinchRef.current) {
-      const [a, b] = [...pointers.values()];
-      const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      const midX = (a.x + b.x) / 2;
-      const midY = (a.y + b.y) / 2;
-      if (dist > 0 && pinchRef.current.dist > 0 && imgSize && boxSize.w > 0) {
-        const oldScale = scaleRef.current;
-        const nextScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, oldScale * (dist / pinchRef.current.dist)));
-        const k = nextScale / oldScale;
-        // ซูมโดยยึดจุดกึ่งกลางนิ้ว: จุดรูปที่อยู่ใต้จุดกึ่งกลางเดิมต้องยังอยู่ใต้จุดกึ่งกลางใหม่หลังซูม (เดิมแค่เลื่อนตาม delta ทำให้รูปไถลหนีนิ้ว) — คำนวณในพิกัดกล่องครอป ไม่ใช่พิกัดจอ
-        const rect = containerRef.current?.getBoundingClientRect();
-        const oldBase = Math.max(boxSize.w / imgSize.w, boxSize.h / imgSize.h);
-        const oldW = imgSize.w * oldBase * oldScale;
-        const oldH = imgSize.h * oldBase * oldScale;
-        const o = offsetRef.current;
-        const oldL = (boxSize.w - oldW) / 2 + o.x;
-        const oldT = (boxSize.h - oldH) / 2 + o.y;
-        const newMidX = rect ? midX - rect.left : midX;
-        const newMidY = rect ? midY - rect.top : midY;
-        const oldMidX = rect ? pinchRef.current.midX - rect.left : pinchRef.current.midX;
-        const oldMidY = rect ? pinchRef.current.midY - rect.top : pinchRef.current.midY;
-        const newL = newMidX + (oldL - oldMidX) * k;
-        const newT = newMidY + (oldT - oldMidY) * k;
-        const newW = imgSize.w * oldBase * nextScale;
-        const newH = imgSize.h * oldBase * nextScale;
-        setOffsetBoth(clampOffset(newL - (boxSize.w - newW) / 2, newT - (boxSize.h - newH) / 2, nextScale));
-        setScaleBoth(nextScale);
-      }
-      pinchRef.current = { dist, midX, midY };
-    }
-  };
-
-  const handlePointerEnd = (e: React.PointerEvent) => {
-    pointersRef.current.delete(e.pointerId);
-    if (pointersRef.current.size < 2) pinchRef.current = null;
-  };
+  }, [file, src]);
 
   const handleConfirm = () => {
     const source = sourceRef.current;
-    if (!source || !disp || !imgSize || boxSize.w === 0) return;
-    // จุดซ้ายบนของรูปที่แสดง (เทียบกับกล่องครอป)
-    const left = (boxSize.w - disp.w) / 2 + offset.x;
-    const top = (boxSize.h - disp.h) / 2 + offset.y;
-    // แปลงกรอบครอป (กล่องทั้งใบ) กลับเป็นพิกัดรูปต้นฉบับ
-    const sx = Math.max(0, (0 - left) / disp.w) * imgSize.w;
-    const sy = Math.max(0, (0 - top) / disp.h) * imgSize.h;
-    const sw = Math.min(imgSize.w - sx, (boxSize.w / disp.w) * imgSize.w);
-    const sh = Math.min(imgSize.h - sy, (boxSize.h / disp.h) * imgSize.h);
-    if (sw <= 0 || sh <= 0) return;
+    const pixels = croppedAreaPixelsRef.current;
+    if (!source || !pixels || !imgSize) return;
+    // กันพิกัดหลุดขอบรูปต้นฉบับ (ปัดเศษ/กันค่าติดลบจากความคลาดเคลื่อน)
+    const sx = Math.max(0, Math.min(imgSize.w - 1, pixels.x));
+    const sy = Math.max(0, Math.min(imgSize.h - 1, pixels.y));
+    const sw = Math.max(1, Math.min(imgSize.w - sx, pixels.width));
+    const sh = Math.max(1, Math.min(imgSize.h - sy, pixels.height));
     const longSide = Math.max(sw, sh);
     const outScale = longSide > MAX_OUTPUT_SIDE ? MAX_OUTPUT_SIDE / longSide : 1;
     const outW = Math.max(1, Math.round(sw * outScale));
@@ -207,26 +106,16 @@ export default function PhotoCropper({ t, file, src, aspect, onConfirm, onUseOri
     <div>
       <h3 className="text-lg font-semibold text-gray-800">{t.cropTitle}</h3>
       <p className="mt-1 text-sm text-gray-500">{t.cropHint}</p>
-      {/* กล่องครอป: สัดส่วนเท่าช่องรูป, ข้างนอกกรอบมืดลง, มีเส้นตาราง 3x3 */}
-      <div ref={containerRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerEnd} onPointerCancel={handlePointerEnd} className="relative mt-4 w-full touch-none overflow-hidden rounded-3xl bg-black shadow-lg shadow-pink-100" style={{ aspectRatio: `${aspect}`, touchAction: "none" }}>
-        {imgSize && disp && boxSize.w > 0 && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="" draggable={false} className="absolute select-none" style={{ width: disp.w, height: disp.h, left: (boxSize.w - disp.w) / 2 + offset.x, top: (boxSize.h - disp.h) / 2 + offset.y }} />
-        )}
-        {/* เส้นกรอบ + ตาราง 3x3 (ไม่รับ pointer — ลากทะลุได้) */}
-        <div className="pointer-events-none absolute inset-0 rounded-3xl ring-2 ring-white/80">
-          <div className="absolute bottom-0 left-1/3 top-0 w-px bg-white/50" />
-          <div className="absolute bottom-0 left-2/3 top-0 w-px bg-white/50" />
-          <div className="absolute left-0 right-0 top-1/3 h-px bg-white/50" />
-          <div className="absolute left-0 right-0 top-2/3 h-px bg-white/50" />
-        </div>
+      {/* กล่องครอป: สัดส่วนเท่าช่องรูป, library จัดการลาก/บีบซูมให้เอง */}
+      <div className="relative mt-4 w-full overflow-hidden rounded-3xl bg-black shadow-lg shadow-pink-100" style={{ aspectRatio: `${aspect}` }}>
+        <Cropper image={src} crop={crop} zoom={zoom} rotation={0} aspect={aspect} minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} cropShape="rect" objectFit="cover" showGrid zoomSpeed={1} restrictPosition onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={(_, pixels) => { croppedAreaPixelsRef.current = pixels; }} style={{ containerStyle: { width: "100%", height: "100%", backgroundColor: "#000000" } }} />
       </div>
       {loadError ? (
         <p className="mt-3 text-center text-sm text-red-500">{t.cropError}</p>
       ) : (
         <div className="mt-4 flex items-center gap-3">
           <span className="shrink-0 text-sm font-medium text-gray-700">{t.cropZoom}</span>
-          <input type="range" min={MIN_SCALE} max={MAX_SCALE} step={0.05} value={scale} onChange={(e) => { const s = Number(e.target.value); setScaleBoth(s); const o = offsetRef.current; setOffsetBoth(clampOffset(o.x, o.y, s)); }} className="w-full accent-pink-500" aria-label={t.cropZoom} />
+          <input type="range" min={MIN_ZOOM} max={MAX_ZOOM} step={0.05} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="w-full accent-pink-500" aria-label={t.cropZoom} />
         </div>
       )}
       <div className="mt-5 flex flex-col gap-3">

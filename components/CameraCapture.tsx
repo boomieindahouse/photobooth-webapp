@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@iconify/react";
 import type { PhotoboothTemplate } from "@/lib/photobooth";
 import type { Dict } from "@/lib/i18n";
 
@@ -170,7 +171,8 @@ export default function CameraCapture({ t, template, onDone, onBack }: Props) {
       </div>
       <div className="mt-5 flex flex-col gap-3">
         {!isShooting && photos.length < template.shots && (
-          <button type="button" onClick={startSession} disabled={!cameraReady} className="w-full rounded-full bg-pink-500 py-4 text-base font-semibold text-white shadow-lg shadow-pink-200 transition hover:bg-pink-600 disabled:opacity-40">
+          <button type="button" onClick={startSession} disabled={!cameraReady} className="flex w-full items-center justify-center gap-2 rounded-full bg-pink-500 py-4 text-base font-semibold text-white shadow-lg shadow-pink-200 transition hover:bg-pink-600 disabled:opacity-40">
+            <Icon icon="lucide:camera" width={20} height={20} aria-hidden="true" />
             {photos.length === 0 ? t.startShoot : `${t.shootMore} ${remaining} ${t.shots}`}
           </button>
         )}

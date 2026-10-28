@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icon } from "@iconify/react";
 import CameraCapture from "@/components/CameraCapture";
 import ResultStep from "@/components/ResultStep";
 import TemplatePicker from "@/components/TemplatePicker";
@@ -113,9 +114,10 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setStep("camera")}
-              className="mt-5 w-full rounded-full bg-pink-500 py-4 text-base font-semibold text-white shadow-lg shadow-pink-200 transition hover:bg-pink-600"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-pink-500 py-4 text-base font-semibold text-white shadow-lg shadow-pink-200 transition hover:bg-pink-600"
             >
               {t.goToCamera}
+              <Icon icon="lucide:arrow-right" width={20} height={20} aria-hidden="true" />
             </button>
           </>
         )}
@@ -151,7 +153,19 @@ export default function Home() {
       </section>
 
       <footer className="mt-6 text-center text-xs leading-relaxed text-gray-400">
-        {t.privacyNote}
+        <p>{t.privacyNote}</p>
+        <p className="mt-2 text-pink-400">
+          Made with ♡ by Boomie (
+          <a
+            href="https://www.instagram.com/pawyd"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-pink-500 underline decoration-pink-300 underline-offset-2 hover:text-pink-600"
+          >
+            @pawyd
+          </a>
+          )
+        </p>
       </footer>
     </main>
   );

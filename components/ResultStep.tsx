@@ -138,9 +138,11 @@ export default function ResultStep({
   const [textOffset, setTextOffset] = useState({ x: 0, y: 0 });
   // สีข้อความที่ผู้ใช้เลือก — auto = ตามสีกรอบแบบเดิม
   const [textColorChoice, setTextColorChoice] = useState<string>("auto");
-  // เทมเพลตเฟรมสำเร็จรูป: เฟรมตายตัว ไม่มีสีกรอบให้ปรับ
-  // แต่ข้อความปรับได้เหมือนเทมเพลตทั่วไป (วาดทับเฟรมตอน export)
-  const isFrameTemplate = Boolean(template.frameOverlay);
+  // เทมเพลตเฟรมสำเร็จรูป / ออกแบบเอง: ดีไซน์ตายตัว ไม่มีสีกรอบให้ปรับ
+  // แต่ข้อความปรับได้เหมือนเทมเพลตทั่วไป (วาดทับดีไซน์ตอน export)
+  const isFrameTemplate = Boolean(
+    template.frameOverlay || template.bg || template.bgGradient,
+  );
   // Pills tabs ในขั้นตอนที่ 3 — ปรับทีละส่วน หน้าไม่ยาว
   type ResultTab = "filter" | "text" | "stickers";
   const [activeTab, setActiveTab] = useState<ResultTab>("filter");
@@ -270,9 +272,11 @@ export default function ResultStep({
         (effectiveTextSize * previewSize.height) / template.stripHeight,
       )
       : effectiveTextSize;
+  // สีข้อความอัตโนมัติอิงพื้นหลังจริง (เทมเพลตออกแบบเองใช้ bg ของตัวเอง)
+  const bgHex = template.bg ?? template.bgGradient?.[0] ?? frameColor.hex;
   const textColor =
     textColorChoice === "auto"
-      ? isDarkHexPublic(frameColor.hex)
+      ? isDarkHexPublic(bgHex)
         ? "#ffffff"
         : "#be185d"
       : textColorChoice;
@@ -789,38 +793,49 @@ export default function ResultStep({
 
       {currentTab === "filter" && (
         <>
-          {/* Filter picker */}
+          {/* Filter picker — จัดกลุ่มตามหมวดฟิลเตอร์ (classic/analog/digicam/mood/glitch) */}
           <h3 className="mt-6 font-medium text-gray-800">{t.filterTitle}</h3>
-          <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
-            {FILTERS.map((item) => {
-              const active = item.id === filter.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setFilter(item)}
-                  className={`shrink-0 rounded-2xl p-1.5 text-center transition ${active
-                      ? "bg-violet-400 shadow-md shadow-violet-200"
-                      : "bg-white ring-1 ring-pink-100"
-                    }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photos[0]}
-                    alt=""
-                    style={{ filter: item.css === "none" ? undefined : item.css }}
-                    className="h-16 w-20 rounded-xl object-cover"
-                  />
-                  <span
-                    className={`mt-1.5 block px-1 pb-1 text-xs font-medium ${active ? "text-white" : "text-gray-600"
-                      }`}
-                  >
-                    {item.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {(["classic", "analog", "digicam", "mood", "glitch"] as const).map((group) => {
+            const items = FILTERS.filter((f) => (f.group ?? "classic") === group);
+            if (items.length === 0) return null;
+            return (
+              <div key={group}>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  {t.filterGroup[group] ?? group}
+                </p>
+                <div className="mt-2 flex gap-3 overflow-x-auto pb-2">
+                  {items.map((item) => {
+                    const active = item.id === filter.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setFilter(item)}
+                        className={`shrink-0 rounded-2xl p-1.5 text-center transition ${active
+                            ? "bg-violet-400 shadow-md shadow-violet-200"
+                            : "bg-white ring-1 ring-pink-100"
+                          }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photos[0]}
+                          alt=""
+                          style={{ filter: item.css === "none" ? undefined : item.css }}
+                          className="h-16 w-20 rounded-xl object-cover"
+                        />
+                        <span
+                          className={`mt-1.5 block px-1 pb-1 text-xs font-medium ${active ? "text-white" : "text-gray-600"
+                            }`}
+                        >
+                          {item.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
 
           {/* Frame color picker — เทมเพลตเฟรมสำเร็จรูปไม่มีสีกรอบให้ปรับ */}
           {!isFrameTemplate && (

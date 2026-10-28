@@ -6,7 +6,11 @@ export type TemplateCategory =
   | "kawaii"
   | "story"
   | "photocard"
-  | "halloween";
+  | "halloween"
+  | "editorial"
+  | "dream"
+  | "archive"
+  | "cyber";
 
 export interface TemplateCell {
   col: number;
@@ -57,7 +61,64 @@ export interface PhotoboothTemplate {
    * เทมเพลตแบบนี้ไม่มีข้อความ/สีกรอบให้ปรับ (เฟรมตายตัว)
    */
   frameOverlay?: string;
-  cellsPx?: { x: number; y: number; w: number; h: number }[];
+  /**
+   * ช่องรูปพิกัดจริง (px) สำหรับเทมเพลตออกแบบเอง (ไม่ใช้ PNG เฟรม):
+   * shape = ทรงของช่อง (rect = สี่เหลี่ยม, circle/ellipse = วงรีในกรอบ,
+   * arch = ซุ้มโค้งบน, heart = หัวใจ, blob = ก้อนโค้งออร์แกนิก,
+   * stamp = แสตมป์ขอบขาว + เส้นประ), rotate = เอียงช่อง (องศา),
+   * radius = มุมมนของ rect (px)
+   */
+  cellsPx?: CellPx[];
+  /** พื้นหลังที่ออกแบบไว้ (แทนสีกรอบที่ผู้ใช้เลือก — เทมเพลตพวกนี้
+   *  จึงไม่มีตัวเลือกสีกรอบเหมือนเทมเพลตเฟรมสำเร็จรูป) */
+  bg?: string;
+  /** พื้นหลังไล่สีแนวตั้ง [สีบน, สีล่าง] (ใช้แทน bg ถ้าระบุ) */
+  bgGradient?: [string, string];
+  /** องค์ประกอบตกแต่งที่วาดทับรูป (พิกัดเป็นสัดส่วน 0-1 ของภาพ) */
+  decor?: TemplateDecor[];
+  /**
+   * ข้อความผู้ใช้วาดทับดีไซน์ที่ท้ายภาพ (เหมือนเทมเพลตเฟรม) —
+   * ใช้กับเทมเพลตออกแบบเองที่ footerHeight = 0 (ไม่มีแถบท้ายภาพแยก)
+   */
+  textOnTop?: boolean;
+}
+
+/** ช่องรูปพิกัดจริงพร้อมทรง/การเอียง */
+export interface CellPx {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  shape?: CellShape;
+  rotate?: number;
+  radius?: number;
+}
+
+export type CellShape =
+  | "rect"
+  | "circle"
+  | "ellipse"
+  | "arch"
+  | "heart"
+  | "blob"
+  | "stamp";
+
+/** องค์ประกอบตกแต่งบนดีไซน์: x/y เป็นสัดส่วน 0-1 ของภาพ */
+export interface TemplateDecor {
+  type: "dot" | "ring" | "star" | "rect" | "text" | "emoji" | "date";
+  x: number;
+  y: number;
+  /** ขนาด (px) — เส้นผ่านศูนย์กลางของ dot/ring/star, ขนาดฟอนต์ของ text/date/emoji */
+  size?: number;
+  color?: string;
+  /** เอียง (องศา) — ใช้กับ text/rect เช่น ป้ายตราประทับเอียง */
+  rotate?: number;
+  text?: string;
+  emoji?: string;
+  bold?: boolean;
+  /** กว้าง/สูง (px) สำหรับ rect */
+  width?: number;
+  height?: number;
 }
 
 export type FilterOp =
@@ -66,11 +127,30 @@ export type FilterOp =
   | { kind: "hueRotate"; value: number }
   | { kind: "brightness"; value: number }
   | { kind: "contrast"; value: number }
-  | { kind: "grayscale"; value: number };
+  | { kind: "grayscale"; value: number }
+  /** ยกสีดำให้ลอย (matte/faded): v' = v + a*(255-v) */
+  | { kind: "fade"; value: number }
+  /** แยกโทนเงา/ไฮไลต์ (เช่น เงาติด teal + ไฮไลต์ติดส้ม) */
+  | {
+      kind: "splitTone";
+      shadow: [number, number, number];
+      highlight: [number, number, number];
+      strength: number;
+    }
+  /** ดึงภาพเหลือ 2 สี: เงา = shadow, สว่าง = highlight */
+  | {
+      kind: "duotone";
+      shadow: [number, number, number];
+      highlight: [number, number, number];
+    }
+  /** ล้างฟิล์มสลับน้ำยา: เงาติดเขียว-เหลือง ไฮไลต์ติดชมพู-ฟ้า */
+  | { kind: "cross" };
 
 export interface PhotoFilter {
   id: string;
   name: string;
+  /** หมวดหมู่ฟิลเตอร์ (classic/analog/digicam/mood/glitch) — ใช้จัดกลุ่มใน UI */
+  group?: string;
   /** CSS filter string — ใช้กับ <img> preview เท่านั้น */
   css: string;
   /**
@@ -97,6 +177,10 @@ export const CATEGORIES: TemplateCategory[] = [
   "story",
   "photocard",
   "halloween",
+  "editorial",
+  "dream",
+  "archive",
+  "cyber",
 ];
 
 /**
@@ -789,6 +873,354 @@ const HALLOWEEN: PhotoboothTemplate[] = [
   },
 ];
 
+/** ---------- Editorial: เลย์เอาต์แมกกาซีนมินิมอล ตัวหนังสือแน่น ---------- */
+const EDITORIAL: PhotoboothTemplate[] = [
+  {
+    id: "ed-cover",
+    name: "Cover Story",
+    desc: "Magazine cover, one tilted 4:5 portrait",
+    category: "editorial",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 800,
+    stripHeight: 1000,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "white",
+    bg: "#f6f2ea",
+    textOnTop: true,
+    cellsPx: [{ x: 120, y: 110, w: 560, h: 700, rotate: -2, radius: 4 }],
+    decor: [
+      { type: "text", x: 0.5, y: 0.045, size: 34, bold: true, color: "#111827", text: "COVER STORY" },
+      { type: "rect", x: 0.5, y: 0.085, width: 560, height: 2, color: "#111827" },
+      { type: "star", x: 0.08, y: 0.18, size: 26, color: "#c9a227" },
+      { type: "star", x: 0.93, y: 0.78, size: 20, color: "#c9a227" },
+    ],
+  },
+  {
+    id: "ed-duo",
+    name: "Spread Duo",
+    desc: "Asymmetric spread, big + small overlapping photos",
+    category: "editorial",
+    shots: 2,
+    cols: 1,
+    rows: 2,
+    stripWidth: 900,
+    stripHeight: 1100,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "white",
+    bg: "#f6f2ea",
+    textOnTop: true,
+    cellsPx: [
+      { x: 60, y: 100, w: 520, h: 660, rotate: -1.5, radius: 4 },
+      { x: 490, y: 430, w: 360, h: 440, rotate: 3, radius: 4 },
+    ],
+    decor: [
+      { type: "text", x: 0.16, y: 0.05, size: 28, bold: true, color: "#111827", text: "ISSUE 07" },
+      { type: "rect", x: 0.16, y: 0.085, width: 180, height: 2, color: "#111827" },
+      { type: "star", x: 0.9, y: 0.12, size: 22, color: "#c9a227" },
+    ],
+  },
+  {
+    id: "ed-trio",
+    name: "Grid Muse",
+    desc: "Editorial grid, wide top photo + two squares",
+    category: "editorial",
+    shots: 3,
+    cols: 1,
+    rows: 3,
+    stripWidth: 900,
+    stripHeight: 1200,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "white",
+    bg: "#f6f2ea",
+    textOnTop: true,
+    cellsPx: [
+      { x: 40, y: 70, w: 820, h: 540, radius: 4 },
+      { x: 40, y: 650, w: 400, h: 400, radius: 4 },
+      { x: 460, y: 650, w: 400, h: 400, rotate: 2, radius: 4 },
+    ],
+    decor: [
+      { type: "text", x: 0.5, y: 0.028, size: 30, bold: true, color: "#111827", text: "M U S E" },
+    ],
+  },
+];
+
+/** ---------- Dream Pop: กราเดียนต์พาสเทล ทรงโค้งนุ่มฟู ---------- */
+const DREAM: PhotoboothTemplate[] = [
+  {
+    id: "dr-cloud",
+    name: "Cloud Nine",
+    desc: "Two soft blob photos on a pastel gradient",
+    category: "dream",
+    shots: 2,
+    cols: 1,
+    rows: 2,
+    stripWidth: 800,
+    stripHeight: 1000,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "blush",
+    bgGradient: ["#ffdce9", "#e6deff"],
+    textOnTop: true,
+    cellsPx: [
+      { x: 50, y: 100, w: 520, h: 520, shape: "blob" },
+      { x: 330, y: 470, w: 430, h: 430, shape: "blob" },
+    ],
+    decor: [
+      { type: "dot", x: 0.12, y: 0.1, size: 16, color: "#ffffff" },
+      { type: "dot", x: 0.88, y: 0.18, size: 20, color: "#ffffff" },
+      { type: "dot", x: 0.15, y: 0.9, size: 14, color: "#ffffff" },
+      { type: "star", x: 0.1, y: 0.55, size: 22, color: "#ffffff" },
+      { type: "emoji", x: 0.86, y: 0.88, size: 44, emoji: "☁️" },
+    ],
+  },
+  {
+    id: "dr-heart",
+    name: "Heart Pop",
+    desc: "Heart photo + circle photo, pastel dream",
+    category: "dream",
+    shots: 2,
+    cols: 1,
+    rows: 2,
+    stripWidth: 800,
+    stripHeight: 1000,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "mint",
+    bgGradient: ["#d9f2e3", "#ffdce9"],
+    textOnTop: true,
+    cellsPx: [
+      { x: 120, y: 120, w: 560, h: 520, shape: "heart" },
+      { x: 430, y: 580, w: 300, h: 300, shape: "circle" },
+    ],
+    decor: [
+      { type: "dot", x: 0.1, y: 0.12, size: 16, color: "#ffffff" },
+      { type: "dot", x: 0.9, y: 0.15, size: 18, color: "#ffffff" },
+      { type: "star", x: 0.12, y: 0.85, size: 24, color: "#ff5da2" },
+      { type: "emoji", x: 0.88, y: 0.88, size: 40, emoji: "💗" },
+    ],
+  },
+  {
+    id: "dr-boba",
+    name: "Boba Trio",
+    desc: "Three circle photos in a playful triangle",
+    category: "dream",
+    shots: 3,
+    cols: 1,
+    rows: 3,
+    stripWidth: 900,
+    stripHeight: 900,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "cream",
+    bgGradient: ["#fff3d6", "#ffdce9"],
+    textOnTop: true,
+    cellsPx: [
+      { x: 40, y: 60, w: 380, h: 380, shape: "circle" },
+      { x: 480, y: 60, w: 380, h: 380, shape: "circle" },
+      { x: 260, y: 430, w: 380, h: 380, shape: "circle" },
+    ],
+    decor: [
+      { type: "dot", x: 0.08, y: 0.5, size: 14, color: "#c9a227" },
+      { type: "dot", x: 0.93, y: 0.5, size: 14, color: "#c9a227" },
+      { type: "dot", x: 0.5, y: 0.06, size: 12, color: "#c9a227" },
+      { type: "star", x: 0.5, y: 0.95, size: 20, color: "#ff8fab" },
+    ],
+  },
+];
+
+/** รูหนามเตยข้างแถบฟิล์ม (ซ้าย/ขวา 14 แถว) */
+const filmSprockets: TemplateDecor[] = [];
+for (let r = 0; r < 14; r++) {
+  const y = 0.055 + r * 0.068;
+  filmSprockets.push(
+    { type: "dot", x: 0.045, y, size: 14, color: "#e5e5e5" },
+    { type: "dot", x: 0.955, y, size: 14, color: "#e5e5e5" },
+  );
+}
+
+/** บาร์โค้ดท้ายใบเสร็จ (แถบแนวตั้งสลับความกว้าง รวม 220px กลางภาพ) */
+const receiptBars: TemplateDecor[] = (() => {
+  const widths = [4, 10, 6, 14, 4, 8, 12, 5, 9, 4, 12, 6, 10, 4, 8, 14];
+  const bars: TemplateDecor[] = [];
+  let cursor = 240;
+  for (const w of widths) {
+    bars.push({
+      type: "rect",
+      x: (cursor + w / 2) / 700,
+      y: 0.915,
+      width: w,
+      height: 50,
+      color: "#111827",
+    });
+    cursor += w + 6;
+  }
+  return bars;
+})();
+
+/** ---------- Archive: ฟิล์ม 35mm / ใบเสร็จ / แสตมป์ ---------- */
+const ARCHIVE: PhotoboothTemplate[] = [
+  {
+    id: "ar-film",
+    name: "Film Reel",
+    desc: "35mm film strip, 4 wide cinematic frames",
+    category: "archive",
+    shots: 4,
+    cols: 1,
+    rows: 4,
+    stripWidth: 800,
+    stripHeight: 1400,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "black",
+    bg: "#111827",
+    textOnTop: true,
+    cellsPx: [
+      { x: 90, y: 90, w: 620, h: 260, radius: 10 },
+      { x: 90, y: 410, w: 620, h: 260, radius: 10 },
+      { x: 90, y: 730, w: 620, h: 260, radius: 10 },
+      { x: 90, y: 1050, w: 620, h: 260, radius: 10 },
+    ],
+    decor: [
+      { type: "text", x: 0.5, y: 0.03, size: 26, bold: true, color: "#f5f5f5", text: "35 MM" },
+      ...filmSprockets,
+    ],
+  },
+  {
+    id: "ar-receipt",
+    name: "Receipt",
+    desc: "Receipt strip, 3 photos with barcode",
+    category: "archive",
+    shots: 3,
+    cols: 1,
+    rows: 3,
+    stripWidth: 700,
+    stripHeight: 1400,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "white",
+    bg: "#fffdf6",
+    textOnTop: true,
+    cellsPx: [
+      { x: 70, y: 180, w: 560, h: 300, radius: 6 },
+      { x: 70, y: 540, w: 560, h: 300, radius: 6 },
+      { x: 70, y: 900, w: 560, h: 300, radius: 6 },
+    ],
+    decor: [
+      { type: "text", x: 0.5, y: 0.05, size: 30, bold: true, color: "#111827", text: "PHOTOBOOTH" },
+      { type: "text", x: 0.5, y: 0.095, size: 20, color: "#6b7280", text: "NO. 0001" },
+      { type: "rect", x: 0.5, y: 0.364, width: 560, height: 2, color: "#d4d4d4" },
+      { type: "rect", x: 0.5, y: 0.621, width: 560, height: 2, color: "#d4d4d4" },
+      { type: "text", x: 0.5, y: 0.875, size: 26, bold: true, color: "#111827", text: "THANK YOU ♡" },
+      ...receiptBars,
+    ],
+  },
+  {
+    id: "ar-stamp",
+    name: "Postage",
+    desc: "Postage stamp photo with postmark",
+    category: "archive",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 800,
+    stripHeight: 1000,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "white",
+    bg: "#efe6d2",
+    textOnTop: true,
+    cellsPx: [{ x: 100, y: 110, w: 600, h: 620, shape: "stamp" }],
+    decor: [
+      { type: "ring", x: 0.72, y: 0.3, size: 150, color: "#9a8a6a" },
+      { type: "text", x: 0.72, y: 0.3, size: 24, bold: true, color: "#9a8a6a", text: "AIR MAIL", rotate: -18 },
+      { type: "star", x: 0.15, y: 0.85, size: 22, color: "#9a8a6a" },
+      { type: "dot", x: 0.88, y: 0.82, size: 14, color: "#9a8a6a" },
+    ],
+  },
+];
+
+/** ---------- Cyber Pop: หน้าต่าง OS เอียง + พิกเซล Y2K ---------- */
+const CYBER: PhotoboothTemplate[] = [
+  {
+    id: "cy-window",
+    name: "Pop Window",
+    desc: "Tilted OS windows with title bars, Y2K pop",
+    category: "cyber",
+    shots: 2,
+    cols: 1,
+    rows: 2,
+    stripWidth: 900,
+    stripHeight: 1100,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "blush",
+    bg: "#ffd1e8",
+    textOnTop: true,
+    cellsPx: [
+      { x: 60, y: 140, w: 520, h: 620, rotate: -3, radius: 24 },
+      { x: 380, y: 460, w: 480, h: 520, rotate: 4, radius: 24 },
+    ],
+    decor: [
+      { type: "text", x: 0.5, y: 0.04, size: 36, bold: true, color: "#ff2e88", text: "Y2K" },
+      { type: "rect", x: 0.356, y: 0.144, width: 520, height: 36, color: "#ffffff", rotate: -3 },
+      { type: "dot", x: 0.105, y: 0.144, size: 14, color: "#ff5f57" },
+      { type: "dot", x: 0.14, y: 0.144, size: 14, color: "#febc2e" },
+      { type: "dot", x: 0.175, y: 0.144, size: 14, color: "#28c840" },
+      { type: "rect", x: 0.689, y: 0.435, width: 480, height: 36, color: "#ffffff", rotate: 4 },
+      { type: "dot", x: 0.46, y: 0.435, size: 14, color: "#ff5f57" },
+      { type: "dot", x: 0.495, y: 0.435, size: 14, color: "#febc2e" },
+      { type: "dot", x: 0.53, y: 0.435, size: 14, color: "#28c840" },
+      { type: "star", x: 0.9, y: 0.08, size: 24, color: "#ff2e88" },
+      { type: "star", x: 0.08, y: 0.9, size: 20, color: "#ffd60a" },
+    ],
+  },
+  {
+    id: "cy-pixel",
+    name: "Pixel Heart",
+    desc: "Arch photo with pixel confetti, year 2000",
+    category: "cyber",
+    shots: 1,
+    cols: 1,
+    rows: 1,
+    stripWidth: 800,
+    stripHeight: 1000,
+    gap: 0,
+    padding: 0,
+    footerHeight: 0,
+    defaultFrameId: "sky",
+    bg: "#d9f0ff",
+    textOnTop: true,
+    cellsPx: [{ x: 120, y: 130, w: 560, h: 700, shape: "arch" }],
+    decor: [
+      { type: "text", x: 0.5, y: 0.05, size: 34, bold: true, color: "#1e3a8a", text: "2000" },
+      { type: "rect", x: 0.08, y: 0.2, width: 16, height: 16, color: "#ff2e88" },
+      { type: "rect", x: 0.14, y: 0.14, width: 16, height: 16, color: "#ffd60a" },
+      { type: "rect", x: 0.9, y: 0.25, width: 16, height: 16, color: "#ff2e88" },
+      { type: "rect", x: 0.86, y: 0.16, width: 16, height: 16, color: "#1e3a8a" },
+      { type: "rect", x: 0.1, y: 0.8, width: 16, height: 16, color: "#ffd60a" },
+      { type: "rect", x: 0.9, y: 0.78, width: 16, height: 16, color: "#1e3a8a" },
+      { type: "rect", x: 0.16, y: 0.88, width: 16, height: 16, color: "#ff2e88" },
+      { type: "rect", x: 0.84, y: 0.88, width: 16, height: 16, color: "#ffd60a" },
+      { type: "star", x: 0.5, y: 0.9, size: 18, color: "#ff2e88" },
+    ],
+  },
+];
+
 export const TEMPLATES: PhotoboothTemplate[] = [
   ...MINIMAL,
   ...DARK,
@@ -798,6 +1230,10 @@ export const TEMPLATES: PhotoboothTemplate[] = [
   ...STORY,
   ...PHOTOCARD,
   ...HALLOWEEN,
+  ...EDITORIAL,
+  ...DREAM,
+  ...ARCHIVE,
+  ...CYBER,
 ];
 
 export const FILTERS: PhotoFilter[] = [
@@ -870,6 +1306,130 @@ export const FILTERS: PhotoFilter[] = [
       { kind: "brightness", value: 1.12 },
       { kind: "saturate", value: 0.9 },
       { kind: "contrast", value: 0.9 },
+    ],
+  },
+  // ---------- Analog & Film Stock ----------
+  {
+    id: "disposable-90s",
+    name: "Disposable 90s",
+    css: "brightness(1.12) contrast(1.2) sepia(0.2) saturate(1.15)",
+    group: "analog",
+    ops: [
+      { kind: "brightness", value: 1.12 },
+      { kind: "contrast", value: 1.2 },
+      { kind: "sepia", value: 0.2 },
+      { kind: "saturate", value: 1.15 },
+    ],
+  },
+  {
+    id: "faded-film",
+    name: "Faded Film",
+    css: "brightness(1.05) contrast(0.85) saturate(0.85) sepia(0.15)",
+    group: "analog",
+    ops: [
+      { kind: "fade", value: 0.12 },
+      { kind: "contrast", value: 0.85 },
+      { kind: "saturate", value: 0.85 },
+      { kind: "sepia", value: 0.15 },
+    ],
+  },
+  {
+    id: "cine-teal-orange",
+    name: "Cine Teal & Orange",
+    css: "saturate(1.15) contrast(1.05) sepia(0.15) hue-rotate(-10deg)",
+    group: "analog",
+    ops: [
+      {
+        kind: "splitTone",
+        shadow: [10, 110, 120],
+        highlight: [255, 170, 80],
+        strength: 0.35,
+      },
+      { kind: "saturate", value: 1.1 },
+      { kind: "contrast", value: 1.05 },
+    ],
+  },
+  // ---------- Y2K Digi-cam ----------
+  {
+    id: "cyber-bloom",
+    name: "Cyber Bloom",
+    css: "brightness(1.14) contrast(0.88) saturate(0.9)",
+    group: "digicam",
+    ops: [
+      { kind: "brightness", value: 1.14 },
+      { kind: "contrast", value: 0.88 },
+      { kind: "saturate", value: 0.9 },
+      { kind: "fade", value: 0.08 },
+    ],
+  },
+  {
+    id: "lofi-ccd",
+    name: "Low-fi CCD",
+    css: "contrast(1.28) saturate(1.5) brightness(1.02)",
+    group: "digicam",
+    ops: [
+      { kind: "contrast", value: 1.28 },
+      { kind: "saturate", value: 1.5 },
+      { kind: "brightness", value: 1.02 },
+      { kind: "hueRotate", value: -8 },
+    ],
+  },
+  // ---------- Mood & Aesthetics ----------
+  {
+    id: "muted-cool",
+    name: "Muted Cool",
+    css: "saturate(0.72) hue-rotate(12deg) brightness(1.05) contrast(0.92)",
+    group: "mood",
+    ops: [
+      { kind: "saturate", value: 0.72 },
+      { kind: "hueRotate", value: 12 },
+      { kind: "brightness", value: 1.05 },
+      { kind: "contrast", value: 0.92 },
+      { kind: "fade", value: 0.05 },
+    ],
+  },
+  {
+    id: "golden-hour",
+    name: "Warm Golden Hour",
+    css: "sepia(0.35) saturate(1.25) brightness(1.08) contrast(0.95)",
+    group: "mood",
+    ops: [
+      { kind: "sepia", value: 0.35 },
+      { kind: "saturate", value: 1.25 },
+      { kind: "brightness", value: 1.08 },
+      { kind: "contrast", value: 0.95 },
+    ],
+  },
+  {
+    id: "noir-bw",
+    name: "Noir Film BW",
+    css: "grayscale(1) contrast(1.3) brightness(0.96)",
+    group: "mood",
+    ops: [
+      { kind: "grayscale", value: 1 },
+      { kind: "contrast", value: 1.3 },
+      { kind: "brightness", value: 0.96 },
+    ],
+  },
+  // ---------- Experimental & Glitch ----------
+  {
+    id: "duotone-cyber",
+    name: "Duotone Cyberpunk",
+    css: "grayscale(1) sepia(0.8) hue-rotate(280deg) saturate(3) contrast(1.1)",
+    group: "glitch",
+    ops: [
+      { kind: "duotone", shadow: [12, 12, 70], highlight: [255, 45, 150] },
+    ],
+  },
+  {
+    id: "cross-process",
+    name: "Cross Process",
+    css: "saturate(1.15) contrast(1.08) hue-rotate(-15deg) sepia(0.2)",
+    group: "glitch",
+    ops: [
+      { kind: "cross" },
+      { kind: "saturate", value: 1.15 },
+      { kind: "contrast", value: 1.08 },
     ],
   },
 ];
@@ -948,6 +1508,45 @@ function roundRectPath(
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+/**
+ * เส้นทางตัดรูปตามทรงของช่อง (พิกัดจุดกลาง 0,0 กว้าง w สูง h)
+ * circle/ellipse = วงรีในกรอบ, arch = ซุ้มโค้งบน, heart = หัวใจ,
+ * blob = ก้อนโค้งออร์แกนิก, stamp/rect = สี่เหลี่ยม (stamp วาดขอบเพิ่มทีหลัง)
+ */
+function cellShapePath(
+  ctx: CanvasRenderingContext2D,
+  shape: CellShape,
+  w: number,
+  h: number,
+  radius: number,
+) {
+  const hw = w / 2;
+  const hh = h / 2;
+  ctx.beginPath();
+  if (shape === "circle" || shape === "ellipse") {
+    ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
+  } else if (shape === "arch") {
+    ctx.moveTo(-hw, hh);
+    ctx.lineTo(-hw, -hh + hw);
+    ctx.arc(0, -hh + hw, hw, Math.PI, 0);
+    ctx.lineTo(hw, hh);
+    ctx.closePath();
+  } else if (shape === "heart") {
+    ctx.moveTo(0, hh * 0.7);
+    ctx.bezierCurveTo(-hw, -hh * 0.1, -hw * 0.7, -hh, 0, -hh * 0.35);
+    ctx.bezierCurveTo(hw * 0.7, -hh, hw, -hh * 0.1, 0, hh * 0.7);
+    ctx.closePath();
+  } else if (shape === "blob") {
+    ctx.moveTo(-hw * 0.8, -hh * 0.6);
+    ctx.bezierCurveTo(-hw, -hh * 0.1, -hw * 0.6, hh * 0.9, 0, hh);
+    ctx.bezierCurveTo(hw * 0.7, hh * 0.95, hw, hh * 0.2, hw * 0.7, -hh * 0.7);
+    ctx.bezierCurveTo(hw * 0.4, -hh, -hw * 0.4, -hh * 0.95, -hw * 0.8, -hh * 0.6);
+    ctx.closePath();
+  } else {
+    roundRectPath(ctx, -hw, -hh, w, h, radius);
+  }
 }
 
 function clamp255(v: number): number {
@@ -1041,6 +1640,33 @@ function applyFilter(
         r = (r - 127.5) * op.value + 127.5;
         g = (g - 127.5) * op.value + 127.5;
         b = (b - 127.5) * op.value + 127.5;
+      } else if (op.kind === "fade") {
+        // ยกจุดดำให้ลอยเป็นสีเทา (matte finish)
+        r = r + op.value * (255 - r);
+        g = g + op.value * (255 - g);
+        b = b + op.value * (255 - b);
+      } else if (op.kind === "splitTone") {
+        // เงาผสมสี shadow มากตามความมืด, ไฮไลต์ผสมสี highlight มากตามความสว่าง
+        const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        const t = lum / 255;
+        const sw = Math.pow(1 - t, 2) * op.strength;
+        const hw = Math.pow(t, 2) * op.strength;
+        const keep = 1 - sw - hw;
+        r = r * keep + op.shadow[0] * sw + op.highlight[0] * hw;
+        g = g * keep + op.shadow[1] * sw + op.highlight[1] * hw;
+        b = b * keep + op.shadow[2] * sw + op.highlight[2] * hw;
+      } else if (op.kind === "duotone") {
+        const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        const t = lum / 255;
+        r = op.shadow[0] + (op.highlight[0] - op.shadow[0]) * t;
+        g = op.shadow[1] + (op.highlight[1] - op.shadow[1]) * t;
+        b = op.shadow[2] + (op.highlight[2] - op.shadow[2]) * t;
+      } else if (op.kind === "cross") {
+        // ล้างสลับน้ำยา: แดงสว่างขึ้น, เขียวลอยในเงา, น้ำเงินกดในเงา+พุ่งในไฮไลต์
+        r = 255 * Math.pow(r / 255, 0.92);
+        g = g * 0.97 + 14 * (1 - g / 255);
+        const bt = b / 255;
+        b = b * 0.92 + 30 * bt * bt;
       }
       r = clamp255(r);
       g = clamp255(g);
@@ -1108,7 +1734,7 @@ export function getTextAnchor(template: PhotoboothTemplate): {
   x: number;
   y: number;
 } {
-  if (template.frameOverlay) {
+  if (template.frameOverlay || template.textOnTop) {
     return {
       x: template.stripWidth / 2,
       y: template.stripHeight - 56,
@@ -1246,7 +1872,15 @@ export async function composeStrip({
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not create canvas");
 
-  ctx.fillStyle = frameColor.hex;
+  // พื้นหลัง: เทมเพลตออกแบบเองใช้ bg/bgGradient ของตัวเอง (ไม่ตามสีกรอบ)
+  if (template.bgGradient) {
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, template.bgGradient[0]);
+    grad.addColorStop(1, template.bgGradient[1]);
+    ctx.fillStyle = grad;
+  } else {
+    ctx.fillStyle = template.bg ?? frameColor.hex;
+  }
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const photoAreaWidth = template.stripWidth - template.padding * 2;
@@ -1263,11 +1897,34 @@ export async function composeStrip({
   const filtered = images.map((img) => applyFilter(img, filter));
 
   if (template.cellsPx) {
-    // เทมเพลตเฟรม: วาดรูปตามตำแหน่งจริง (ไม่ตัดมุม — เฟรมกำหนดรูปทรงเอง)
+    // ช่องพิกัดจริง: ตัดตามทรง + เอียงได้ (เทมเพลตเฟรมเก่าไม่มี shape/
+    // rotate จึงวาดสี่เหลี่ยมตรงเหมือนเดิมทุกประการ)
     filtered.forEach((img, i) => {
       const r = template.cellsPx?.[i];
       if (!r) return;
-      drawCover(ctx, img, r.x, r.y, r.w, r.h);
+      const cx = r.x + r.w / 2;
+      const cy = r.y + r.h / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (r.rotate) ctx.rotate((r.rotate * Math.PI) / 180);
+      cellShapePath(ctx, r.shape ?? "rect", r.w, r.h, r.radius ?? 0);
+      ctx.clip();
+      drawCover(ctx, img, -r.w / 2, -r.h / 2, r.w, r.h);
+      ctx.restore();
+      if (r.shape === "stamp") {
+        // แสตมป์: ขอบขาว + เส้นประด้านใน (วาดหลังรูป ทับขอบรูปพอดี)
+        ctx.save();
+        ctx.translate(cx, cy);
+        if (r.rotate) ctx.rotate((r.rotate * Math.PI) / 180);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 18;
+        ctx.strokeRect(-r.w / 2, -r.h / 2, r.w, r.h);
+        ctx.setLineDash([8, 8]);
+        ctx.strokeStyle = "#9ca3af";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-r.w / 2 + 16, -r.h / 2 + 16, r.w - 32, r.h - 32);
+        ctx.restore();
+      }
     });
   } else {
     filtered.forEach((img, i) => {
@@ -1280,6 +1937,77 @@ export async function composeStrip({
       drawCover(ctx, img, x, y, w, h);
       ctx.restore();
     });
+  }
+
+  // องค์ประกอบตกแต่งของเทมเพลตออกแบบเอง (วาดทับรูป ก่อนข้อความผู้ใช้)
+  if (template.decor) {
+    for (const d of template.decor) {
+      const cx = d.x * canvas.width;
+      const cy = d.y * canvas.height;
+      const size = d.size ?? 20;
+      const color = d.color ?? "#ffffff";
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (d.rotate) ctx.rotate((d.rotate * Math.PI) / 180);
+      if (d.type === "dot") {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (d.type === "ring") {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(3, size * 0.06);
+        ctx.beginPath();
+        ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (d.type === "star") {
+        // ประกาย 4 แฉก
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        const s = size / 2;
+        const q = size * 0.16;
+        ctx.moveTo(0, -s);
+        ctx.quadraticCurveTo(q, -q, s, 0);
+        ctx.quadraticCurveTo(q, q, 0, s);
+        ctx.quadraticCurveTo(-q, q, -s, 0);
+        ctx.quadraticCurveTo(-q, -q, 0, -s);
+        ctx.fill();
+      } else if (d.type === "rect") {
+        ctx.fillStyle = color;
+        ctx.fillRect(
+          -(d.width ?? size) / 2,
+          -(d.height ?? size) / 2,
+          d.width ?? size,
+          d.height ?? size,
+        );
+      } else if (d.type === "text") {
+        ctx.fillStyle = color;
+        ctx.font = `${d.bold ? "700" : "600"} ${size}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(d.text ?? "", 0, 0);
+      } else if (d.type === "emoji") {
+        ctx.font = `${size}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(d.emoji ?? "", 0, 0);
+      } else if (d.type === "date") {
+        ctx.fillStyle = color;
+        ctx.font = `${d.bold ? "700" : "600"} ${size}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(
+          new Date().toLocaleDateString(dateLocale, {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          0,
+          0,
+        );
+      }
+      ctx.restore();
+    }
   }
 
   // เฟรมสำเร็จรูปวาดทับรูป — รูปโผล่เฉพาะช่องโปร่งใสของเฟรม
@@ -1297,8 +2025,10 @@ export async function composeStrip({
     month: "2-digit",
     year: "numeric",
   });
+  // สีข้อความอัตโนมัติอิงพื้นหลังจริง (เทมเพลตออกแบบเองใช้ bg ของตัวเอง)
+  const bgHex = template.bg ?? template.bgGradient?.[0] ?? frameColor.hex;
   const textColor =
-    textColorParam ?? (isDarkHex(frameColor.hex) ? "#ffffff" : "#be185d");
+    textColorParam ?? (isDarkHex(bgHex) ? "#ffffff" : "#be185d");
 
   const customText = captionText.trim();
   // ฟอนต์ที่ใช้วาด: ถ้าผู้ใช้เลือกฟอนต์ ใช้ฟอนต์นั้น (ถอยไป Mali สำหรับไทย)
@@ -1366,10 +2096,10 @@ export async function composeStrip({
         ctx.fillText(line, anchorX, startY + i * lineHeight);
       });
     }
-  } else if (template.frameOverlay) {
-    // เทมเพลตเฟรมสำเร็จรูป: ข้อความวาดทับเฟรมที่จุด anchor ท้ายภาพ
-    // (วาดหลัง overlay จึงไม่ถูกเฟรมบัง; รูปแบบเดียวกับแถบท้ายภาพ
-    // ของเทมเพลตทั่วไป — ไม่ใส่ทั้งสองอย่าง = ไม่มีข้อความ)
+  } else if (template.frameOverlay || template.textOnTop) {
+    // เทมเพลตเฟรมสำเร็จรูป / ออกแบบเอง: ข้อความวาดทับดีไซน์ที่จุด
+    // anchor ท้ายภาพ (วาดหลัง overlay จึงไม่ถูกเฟรมบัง; รูปแบบเดียว
+    // กับแถบท้ายภาพของเทมเพลตทั่วไป — ไม่ใส่ทั้งสองอย่าง = ไม่มีข้อความ)
     if (customText || includeDate) {
       await loadCustomFont(captionFontFamily, captionSize);
       const body =

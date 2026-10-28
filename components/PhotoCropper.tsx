@@ -5,7 +5,7 @@ import type { Dict } from "@/lib/i18n";
 
 interface Props {
   t: Dict;
-  file: File;
+  file: File | null;
   src: string;
   /** สัดส่วนกว้าง:สูงของช่องรูปที่จะวาง (กรอบครอปเท่านี้พอดี) */
   aspect: number;
@@ -39,6 +39,11 @@ export default function PhotoCropper({ t, file, src, aspect, onConfirm, onUseOri
   const [boxSize, setBoxSize] = useState({ w: 0, h: 0 });
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  // ค่าล่าสุดสำหรับ handler ท่าทาง — pointermove หลายรอบอาจวิ่งก่อน React re-render ทำให้ closure ของ state เก่า (ซูมค้าง/กระตุก) จึงเก็บ scale/offset ใน ref เป็นค่าจริง แล้ว mirror ลง state เพื่อ render
+  const scaleRef = useRef(1);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const setScaleBoth = (s: number) => { scaleRef.current = s; setScale(s); };
+  const setOffsetBoth = (o: { x: number; y: number }) => { offsetRef.current = o; setOffset(o); };
 
   // โหลดต้นฉบับแบบหมุนตาม EXIF; ถ้าไม่รองรับ ถอยไปใช้ <img> ธรรมดา
   useEffect(() => {
@@ -46,7 +51,7 @@ export default function PhotoCropper({ t, file, src, aspect, onConfirm, onUseOri
     let bitmap: ImageBitmap | null = null;
     const load = async () => {
       try {
-        if (typeof createImageBitmap === "function") {
+        if (file && typeof createImageBitmap === "function") {
           bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
           if (cancelled) {
             bitmap.close();
@@ -134,16 +139,35 @@ export default function PhotoCropper({ t, file, src, aspect, onConfirm, onUseOri
     if (pointers.size === 1) {
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
-      setOffset((o) => clampOffset(o.x + dx, o.y + dy, scale));
+      const o = offsetRef.current;
+      setOffsetBoth(clampOffset(o.x + dx, o.y + dy, scaleRef.current));
     } else if (pointers.size === 2 && pinchRef.current) {
       const [a, b] = [...pointers.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
       const midX = (a.x + b.x) / 2;
       const midY = (a.y + b.y) / 2;
-      if (dist > 0 && pinchRef.current.dist > 0) {
-        const nextScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * (dist / pinchRef.current.dist)));
-        setOffset((o) => clampOffset(o.x + (midX - pinchRef.current!.midX), o.y + (midY - pinchRef.current!.midY), nextScale));
-        setScale(nextScale);
+      if (dist > 0 && pinchRef.current.dist > 0 && imgSize && boxSize.w > 0) {
+        const oldScale = scaleRef.current;
+        const nextScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, oldScale * (dist / pinchRef.current.dist)));
+        const k = nextScale / oldScale;
+        // ซูมโดยยึดจุดกึ่งกลางนิ้ว: จุดรูปที่อยู่ใต้จุดกึ่งกลางเดิมต้องยังอยู่ใต้จุดกึ่งกลางใหม่หลังซูม (เดิมแค่เลื่อนตาม delta ทำให้รูปไถลหนีนิ้ว) — คำนวณในพิกัดกล่องครอป ไม่ใช่พิกัดจอ
+        const rect = containerRef.current?.getBoundingClientRect();
+        const oldBase = Math.max(boxSize.w / imgSize.w, boxSize.h / imgSize.h);
+        const oldW = imgSize.w * oldBase * oldScale;
+        const oldH = imgSize.h * oldBase * oldScale;
+        const o = offsetRef.current;
+        const oldL = (boxSize.w - oldW) / 2 + o.x;
+        const oldT = (boxSize.h - oldH) / 2 + o.y;
+        const newMidX = rect ? midX - rect.left : midX;
+        const newMidY = rect ? midY - rect.top : midY;
+        const oldMidX = rect ? pinchRef.current.midX - rect.left : pinchRef.current.midX;
+        const oldMidY = rect ? pinchRef.current.midY - rect.top : pinchRef.current.midY;
+        const newL = newMidX + (oldL - oldMidX) * k;
+        const newT = newMidY + (oldT - oldMidY) * k;
+        const newW = imgSize.w * oldBase * nextScale;
+        const newH = imgSize.h * oldBase * nextScale;
+        setOffsetBoth(clampOffset(newL - (boxSize.w - newW) / 2, newT - (boxSize.h - newH) / 2, nextScale));
+        setScaleBoth(nextScale);
       }
       pinchRef.current = { dist, midX, midY };
     }
@@ -202,7 +226,7 @@ export default function PhotoCropper({ t, file, src, aspect, onConfirm, onUseOri
       ) : (
         <div className="mt-4 flex items-center gap-3">
           <span className="shrink-0 text-sm font-medium text-gray-700">{t.cropZoom}</span>
-          <input type="range" min={MIN_SCALE} max={MAX_SCALE} step={0.05} value={scale} onChange={(e) => { const s = Number(e.target.value); setScale(s); setOffset((o) => clampOffset(o.x, o.y, s)); }} className="w-full accent-pink-500" aria-label={t.cropZoom} />
+          <input type="range" min={MIN_SCALE} max={MAX_SCALE} step={0.05} value={scale} onChange={(e) => { const s = Number(e.target.value); setScaleBoth(s); const o = offsetRef.current; setOffsetBoth(clampOffset(o.x, o.y, s)); }} className="w-full accent-pink-500" aria-label={t.cropZoom} />
         </div>
       )}
       <div className="mt-5 flex flex-col gap-3">

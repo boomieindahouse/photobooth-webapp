@@ -34,11 +34,13 @@ export interface Dict {
   cropUseOriginal: string;
   cropCancel: string;
   cropError: string;
+  tapToRecrop: string;
   shotLabel: string;
   resultTitle: string;
   resultDesc: string;
   composing: string;
   filterTitle: string;
+  filterGroup: Record<string, string>;
   frameTitle: string;
   tabFilterFrame: string;
   tabTextFonts: string;
@@ -123,12 +125,20 @@ export const translations: Record<Language, Dict> = {
     cropUseOriginal: "Use full photo without cropping",
     cropCancel: "Cancel",
     cropError: "Couldn't load this photo",
+    tapToRecrop: "Tap a photo to crop that shot again",
     shotLabel: "Shot",
     resultTitle: "3. Edit & download",
     resultDesc:
       "Try different filters and frame colors — the preview updates instantly.",
     composing: "Composing your strip…",
     filterTitle: "Filter / Tone",
+    filterGroup: {
+      classic: "Classic",
+      analog: "Analog & Film",
+      digicam: "Y2K Digi-cam",
+      mood: "Mood",
+      glitch: "Experimental",
+    },
     frameTitle: "Frame color",
     tabFilterFrame: "Filter & Frame",
     tabTextFonts: "Text & Fonts",
@@ -169,6 +179,17 @@ export const translations: Record<Language, Dict> = {
       "pet-single": "One big shot — your pet is the star",
       "polaroid-classic": "One big photo with a blank white space below for your own caption",
       "polaroid-duo": "Two photos stacked with a caption space below, like two Polaroids in one",
+      "ed-cover": "Magazine cover, one tilted 4:5 portrait",
+      "ed-duo": "Asymmetric spread, big + small overlapping photos",
+      "ed-trio": "Editorial grid, wide top photo + two squares",
+      "dr-cloud": "Two soft blob photos on a pastel gradient",
+      "dr-heart": "Heart photo + circle photo, pastel dream",
+      "dr-boba": "Three circle photos in a playful triangle",
+      "ar-film": "35mm film strip, 4 wide cinematic frames",
+      "ar-receipt": "Receipt strip, 3 photos with barcode",
+      "ar-stamp": "Postage stamp photo with postmark",
+      "cy-window": "Tilted OS windows with title bars, Y2K pop",
+      "cy-pixel": "Arch photo with pixel confetti, year 2000",
     },
     frameColorName: {
       white: "White",
@@ -194,6 +215,10 @@ export const translations: Record<Language, Dict> = {
       story: "Story",
       photocard: "Photocard",
       halloween: "Halloween",
+      editorial: "Editorial",
+      dream: "Dream Pop",
+      archive: "Archive",
+      cyber: "Cyber Pop",
     },
     categoryDesc: {
       minimal: "Clean, cute, pastel strips",
@@ -204,6 +229,10 @@ export const translations: Record<Language, Dict> = {
       story: "Tall grid story frame with 3 shots",
       photocard: "Checker photocard frame with 6 shots",
       halloween: "Spooky skull cards and Halloween frames, 1 shot each",
+      editorial: "Magazine-minimal layouts, big type, asymmetric grids",
+      dream: "Soft pastel gradients, cloud blobs and heart shapes",
+      archive: "35mm film strips, receipts and postage stamps",
+      cyber: "Tilted pop windows, pixel sparkles, Y2K chrome",
     },
     categoryTitle: "Choose a category",
     categoryDescText: "Pick a style first — then choose a template inside it.",
@@ -271,11 +300,19 @@ export const translations: Record<Language, Dict> = {
     cropUseOriginal: "ใช้รูปเต็มโดยไม่ครอป",
     cropCancel: "ยกเลิก",
     cropError: "โหลดรูปนี้ไม่ได้",
+    tapToRecrop: "แตะที่รูปเพื่อครอปช็อตนั้นใหม่อีกครั้ง",
     shotLabel: "ช็อตที่",
     resultTitle: "3. แต่งรูป & ดาวน์โหลด",
     resultDesc: "ลองเปลี่ยนฟิลเตอร์กับสีกรอบได้เลย พรีวิวจะอัปเดตทันที",
     composing: "กำลังประกอบแถบรูป…",
     filterTitle: "ฟิลเตอร์ / โทนสี",
+    filterGroup: {
+      classic: "คลาสสิก",
+      analog: "อนาล็อก & ฟิล์ม",
+      digicam: "ดิจิแคม Y2K",
+      mood: "มู้ด & อารมณ์",
+      glitch: "เอ็กซ์เพอริเมนต์",
+    },
     frameTitle: "สีกรอบ",
     tabFilterFrame: "ฟิลเตอร์และกรอบ",
     tabTextFonts: "ข้อความและฟอนต์",
@@ -316,6 +353,17 @@ export const translations: Record<Language, Dict> = {
       "pet-single": "รูปใหญ่ 1 ช็อต สัตว์เลี้ยงเป็นพระเอก",
       "polaroid-classic": "รูปใหญ่ 1 ช็อต มีช่องว่างสีขาวด้านล่างให้เขียนข้อความเอง",
       "polaroid-duo": "รูปซ้อน 2 ช็อต มีช่องเขียนข้อความด้านล่าง เหมือนโพลารอยด์ 2 ใบในภาพเดียว",
+      "ed-cover": "ปกแมกกาซีน รูปแนวตั้ง 4:5 เอียงนิด ๆ",
+      "ed-duo": "เลย์เอาต์เหลื่อมกัน รูปใหญ่ + รูปเล็กซ้อนทับ",
+      "ed-trio": "กริดเอดิทอเรียล รูปบนกว้าง + รูปล่างสี่เหลี่ยม 2 ช็อต",
+      "dr-cloud": "รูปทรงก้อนเมฆ 2 ช็อต บนกราเดียนต์พาสเทล",
+      "dr-heart": "รูปหัวใจ + รูปวงกลม ฟีลฝันพาสเทล",
+      "dr-boba": "รูปวงกลม 3 ช็อต วางเป็นสามเหลี่ยมเล่น ๆ",
+      "ar-film": "แถบฟิล์ม 35 มม. รูปแนวนอนซีนีม่า 4 ช็อต",
+      "ar-receipt": "แถบใบเสร็จ รูป 3 ช็อต มีบาร์โค้ด",
+      "ar-stamp": "รูปแสตมป์พร้อมตราประทับไปรษณีย์",
+      "cy-window": "หน้าต่าง OS เอียง ๆ มีแถบชื่อหน้าต่าง สไตล์ Y2K",
+      "cy-pixel": "รูปซุ้มโค้งกับคอนเฟตตี้พิกเซล ปี 2000",
     },
     frameColorName: {
       white: "ขาว",
@@ -341,6 +389,10 @@ export const translations: Record<Language, Dict> = {
       story: "สตอรี่",
       photocard: "โฟโต้การ์ด",
       halloween: "ฮาโลวีน",
+      editorial: "เอดิทอเรียล",
+      dream: "ดรีมป๊อป",
+      archive: "อาร์ไคฟ์",
+      cyber: "ไซเบอร์ป๊อป",
     },
     categoryDesc: {
       minimal: "แถบเรียบ ๆ น่ารัก โทนพาสเทล",
@@ -351,6 +403,10 @@ export const translations: Record<Language, Dict> = {
       story: "กรอบสตอรี่แนวตั้งลายตาราง ถ่ายได้ 3 ช็อต",
       photocard: "กรอบโฟโต้การ์ดลายตาราง ถ่ายได้ 6 ช็อต",
       halloween: "การ์ดกะโหลกและกรอบฮาโลวีนสุดหลอน ถ่ายได้ 1 ช็อต",
+      editorial: "เลย์เอาต์แมกกาซีนมินิมอล ตัวหนังสือแน่น กริดเหลื่อมกัน",
+      dream: "กราเดียนต์พาสเทลนุ่ม ๆ ทรงก้อนเมฆและหัวใจ",
+      archive: "แถบฟิล์ม 35 มม. ใบเสร็จ และแสตมป์",
+      cyber: "หน้าต่างป๊อปเอียง ๆ ประกายพิกเซล สไตล์ Y2K",
     },
     categoryTitle: "เลือกหมวดหมู่",
     categoryDescText: "เลือกสไตล์ก่อน แล้วค่อยเลือกเทมเพลตข้างในหมวดนั้น",

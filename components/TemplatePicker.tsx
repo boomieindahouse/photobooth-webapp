@@ -46,6 +46,40 @@ function MiniStrip({ template }: { template: PhotoboothTemplate }) {
       </div>
     );
   }
+  // เทมเพลตออกแบบเอง (cellsPx ไม่มี PNG เฟรม): พรีวิวตามตำแหน่ง/ทรงจริง
+  if (template.cellsPx) {
+    const bg =
+      template.bg ?? template.bgGradient?.[0] ?? frameById(template.defaultFrameId).hex;
+    const shapeRadius = (shape?: string) =>
+      shape === "circle" || shape === "ellipse"
+        ? "50%"
+        : shape === "arch"
+          ? "50% 50% 6px 6px"
+          : shape === "heart" || shape === "blob"
+            ? "40%"
+            : "6px";
+    return (
+      <div
+        className="relative shrink-0 overflow-hidden rounded-lg ring-1 ring-pink-100"
+        style={{ width, height, backgroundColor: bg }}
+      >
+        {template.cellsPx.map((c, i) => (
+          <div
+            key={i}
+            className="absolute bg-pink-200"
+            style={{
+              left: `${(c.x / template.stripWidth) * 100}%`,
+              top: `${(c.y / template.stripHeight) * 100}%`,
+              width: `${(c.w / template.stripWidth) * 100}%`,
+              height: `${(c.h / template.stripHeight) * 100}%`,
+              borderRadius: shapeRadius(c.shape),
+              transform: c.rotate ? `rotate(${c.rotate}deg)` : undefined,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
   const frame = frameById(template.defaultFrameId);
   const isDark = frame.id === "black";
   const cells = photoCells(template);

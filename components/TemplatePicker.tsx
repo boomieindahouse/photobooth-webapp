@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { Icon } from "@iconify/react";
 import {
@@ -18,6 +16,11 @@ interface Props {
   onSelect: (template: PhotoboothTemplate) => void;
 }
 
+/**
+ * พรีวิวแถบเล็ก ๆ ตามกริดจริงของเทมเพลต (รองรับเซลล์ผสมขนาด + panel)
+ * ขนาด fit ในกล่อง 150x132 เสมอ — เดิม Duo Wide คำนวณได้ 286px
+ * จนล้นการ์ด 2 คอลัมน์ ทำให้ข้อความถูกตัดและทับการ์ดข้าง ๆ
+ */
 function MiniStrip({ template }: { template: PhotoboothTemplate }) {
   const ratio = template.stripWidth / template.stripHeight;
   let width = 132 * ratio;
@@ -27,6 +30,22 @@ function MiniStrip({ template }: { template: PhotoboothTemplate }) {
     height = 150 / ratio;
   }
   if (width < 56) width = 56;
+  // เทมเพลตเฟรมสำเร็จรูป: พรีวิวด้วยรูปเฟรมจริงแทนกริดจำลอง
+  if (template.frameOverlay) {
+    return (
+      <div
+        className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg ring-1 ring-pink-100"
+        style={{ width, height }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={template.frameOverlay}
+          alt=""
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
   const frame = frameById(template.defaultFrameId);
   const isDark = frame.id === "black";
   const cells = photoCells(template);
@@ -93,18 +112,17 @@ function TemplateCard({
       key={template.id}
       type="button"
       onClick={() => onSelect(template)}
-      className={`flex min-w-0 items-center gap-4 overflow-hidden rounded-3xl border-2 p-4 text-left transition ${
-        active
+      className={`flex min-w-0 items-center gap-4 overflow-hidden rounded-3xl border-2 p-4 text-left transition ${active
           ? "border-pink-400 bg-pink-50 shadow-md shadow-pink-100"
           : "border-pink-100 bg-white hover:border-pink-200 hover:bg-pink-50/50"
-      }`}
+        }`}
     >
       <MiniStrip template={template} />
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-gray-800">{template.name}</span>
+          <span className="font-medium text-gray-800">{template.name}</span>
           {active && (
-            <span className="rounded-full bg-pink-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+            <span className="rounded-full bg-violet-400 px-2 py-0.5 text-[11px] font-medium text-white">
               {t.selected}
             </span>
           )}
@@ -122,8 +140,11 @@ function TemplateCard({
 }
 
 export default function TemplatePicker({ t, selected, onSelect }: Props) {
+  // หมวดหมู่ก่อนเสมอ — ผู้ใช้ไม่ต้องเลื่อนผ่านเทมเพลตทั้งหมด 27 แบบ
+  // กดการ์ดหมวดหมู่แล้วค่อยเห็นเฉพาะเทมเพลตในหมวดนั้น
   const [category, setCategory] = useState<TemplateCategory | null>(null);
 
+  // หน้าเลือกเทมเพลตในหมวดที่กดมา
   if (category) {
     const templates = TEMPLATES.filter((tpl) => tpl.category === category);
     return (
@@ -131,11 +152,11 @@ export default function TemplatePicker({ t, selected, onSelect }: Props) {
         <button
           type="button"
           onClick={() => setCategory(null)}
-          className="text-sm font-semibold text-pink-500 hover:text-pink-600"
+          className="text-sm font-medium text-pink-500 hover:text-pink-600"
         >
           {t.backToCategories}
         </button>
-        <h2 className="mt-2 text-lg font-semibold text-gray-800">
+        <h2 className="mt-2 text-lg font-medium text-gray-800">
           {t.categoryNames[category] ?? category}
           <span className="ml-2 rounded-full bg-pink-100 px-2 py-0.5 text-xs font-medium text-pink-700">
             {templates.length}
@@ -160,9 +181,10 @@ export default function TemplatePicker({ t, selected, onSelect }: Props) {
     );
   }
 
+  // หน้าแรก: การ์ดหมวดหมู่เท่านั้น
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-800">
+      <h2 className="text-lg font-medium text-gray-800">
         {t.chooseTemplateTitle}
       </h2>
       <p className="mt-1 text-sm text-gray-500">{t.categoryDescText}</p>
@@ -176,14 +198,13 @@ export default function TemplatePicker({ t, selected, onSelect }: Props) {
               key={cat}
               type="button"
               onClick={() => setCategory(cat)}
-              className={`flex flex-col items-center gap-2 rounded-3xl border-2 p-4 text-center transition ${
-                hasSelected
+              className={`flex flex-col items-center gap-2 rounded-3xl border-2 p-4 text-center transition ${hasSelected
                   ? "border-pink-400 bg-pink-50 shadow-md shadow-pink-100"
                   : "border-pink-100 bg-white hover:border-pink-200 hover:bg-pink-50/50"
-              }`}
+                }`}
             >
               {preview && <MiniStrip template={preview} />}
-              <span className="font-semibold text-gray-800">
+              <span className="font-medium text-gray-800">
                 {t.categoryNames[cat] ?? cat}
               </span>
               <span className="text-xs leading-snug text-gray-500">

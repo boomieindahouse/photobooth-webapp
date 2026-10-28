@@ -135,7 +135,7 @@ export default function CameraCapture({ t, template, onDone, onBack }: Props) {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-800">{t.cameraTitle} — {template.name}</h2>
+      <h2 className="text-lg font-medium text-gray-800">{t.cameraTitle} — {template.name}</h2>
       <p className="mt-1 text-sm text-gray-500">{t.cameraDesc}</p>
       <div className="relative mt-4 overflow-hidden rounded-3xl bg-gray-900 shadow-lg shadow-pink-100">
         <div className="relative aspect-[4/3] w-full">
@@ -144,7 +144,7 @@ export default function CameraCapture({ t, template, onDone, onBack }: Props) {
           {cameraError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-pink-50 p-6 text-center">
               <p className="text-sm text-gray-600">{cameraError}</p>
-              <button type="button" onClick={startCamera} className="rounded-full bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white">{t.retryCamera}</button>
+              <button type="button" onClick={startCamera} className="rounded-full bg-violet-400 px-5 py-2.5 text-sm font-medium text-white">{t.retryCamera}</button>
             </div>
           )}
           {countdown !== null && (
@@ -171,15 +171,15 @@ export default function CameraCapture({ t, template, onDone, onBack }: Props) {
       </div>
       <div className="mt-5 flex flex-col gap-3">
         {!isShooting && photos.length < template.shots && (
-          <button type="button" onClick={startSession} disabled={!cameraReady} className="flex w-full items-center justify-center gap-2 rounded-full bg-pink-500 py-4 text-base font-semibold text-white shadow-lg shadow-pink-200 transition hover:bg-pink-600 disabled:opacity-40">
+          <button type="button" onClick={startSession} disabled={!cameraReady} className="flex w-full items-center justify-center gap-2 rounded-full bg-violet-400 py-4 text-base font-medium text-white shadow-lg shadow-violet-200 transition hover:bg-violet-500 disabled:opacity-40">
             <Icon icon="lucide:camera" width={20} height={20} aria-hidden="true" />
             {photos.length === 0 ? t.startShoot : `${t.shootMore} ${remaining} ${t.shots}`}
           </button>
         )}
         {isShooting && <p className="rounded-full bg-pink-100 py-3 text-center text-sm font-medium text-pink-700">{t.shootingAuto}</p>}
         <div className="flex gap-3">
-          <button type="button" onClick={onBack} disabled={isShooting} className="flex-1 rounded-full border-2 border-pink-200 bg-white py-3 text-sm font-semibold text-pink-600 disabled:opacity-40">{t.changeTemplate}</button>
-          <button type="button" onClick={retakeLast} disabled={isShooting || photos.length === 0} className="flex-1 rounded-full border-2 border-pink-200 bg-white py-3 text-sm font-semibold text-pink-600 disabled:opacity-40">{t.retakeLast}</button>
+          <button type="button" onClick={onBack} disabled={isShooting} className="flex-1 rounded-full border-2 border-pink-200 bg-white py-3 text-sm font-medium text-pink-600 disabled:opacity-40">{t.changeTemplate}</button>
+          <button type="button" onClick={retakeLast} disabled={isShooting || photos.length === 0} className="flex-1 rounded-full border-2 border-pink-200 bg-white py-3 text-sm font-medium text-pink-600 disabled:opacity-40">{t.retakeLast}</button>
         </div>
         <label className="cursor-pointer rounded-full bg-white py-3 text-center text-sm font-medium text-gray-500 ring-1 ring-pink-100">
           {t.noCameraUpload}

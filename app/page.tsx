@@ -59,11 +59,10 @@ export default function Home() {
               type="button"
               onClick={() => setLang(item.code)}
               aria-pressed={lang === item.code}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-                lang === item.code
-                  ? "bg-pink-500 text-white"
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${lang === item.code
+                  ? "bg-violet-400 text-white"
                   : "text-pink-500 hover:bg-pink-50"
-              }`}
+                }`}
             >
               {item.label}
             </button>
@@ -76,22 +75,20 @@ export default function Home() {
         {t.steps.map((label, i) => (
           <li key={label} className="flex flex-1 items-center gap-2 last:flex-none">
             <span
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                i === stepIndex
-                  ? "bg-pink-500 text-white"
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${i === stepIndex
+                  ? "bg-violet-400 text-white"
                   : i < stepIndex
                     ? "bg-pink-200 text-pink-700"
                     : "bg-white text-gray-400 ring-1 ring-pink-100"
-              }`}
+                }`}
             >
               {i + 1}
             </span>
             <span
-              className={`hidden text-sm sm:block ${
-                i === stepIndex
-                  ? "font-semibold text-gray-800"
+              className={`hidden text-sm sm:block ${i === stepIndex
+                  ? "font-medium text-gray-800"
                   : "text-gray-400"
-              }`}
+                }`}
             >
               {label}
             </span>
@@ -114,7 +111,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setStep("camera")}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-pink-500 py-4 text-base font-semibold text-white shadow-lg shadow-pink-200 transition hover:bg-pink-600"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-violet-400 py-4 text-base font-medium text-white shadow-lg shadow-violet-200 transition hover:bg-violet-500"
             >
               {t.goToCamera}
               <Icon icon="lucide:arrow-right" width={20} height={20} aria-hidden="true" />
@@ -160,7 +157,7 @@ export default function Home() {
             href="https://www.instagram.com/pawyd"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-pink-500 underline decoration-pink-300 underline-offset-2 hover:text-pink-600"
+            className="font-medium text-pink-500 underline decoration-pink-300 underline-offset-2 hover:text-pink-600"
           >
             @pawyd
           </a>

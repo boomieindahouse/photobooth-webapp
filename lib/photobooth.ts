@@ -1684,12 +1684,15 @@ function applyFilter(
 
 /** GIF จากรูปที่ถ่าย: ใช้ได้เฉพาะเทมเพลต 2 รูปขึ้นไป
  * เรียงรูปที่ถ่าย (ผ่านฟิลเตอร์เดียวกับแถบรูป) เป็นเฟรมต่อเนื่อง
- * วนลูปไม่รู้จบ รวมทั้งคลิปประมาณ 7 วินาที (แบ่งเวลาเท่า ๆ กันทุกเฟรม)
- * เฟรมแรกกำหนดขนาดภาพ (ย่อด้านยาวสุดเหลือ 480px กันไฟล์ใหญ่และ
- * เข้ารหัสช้า) เฟรมถัดไปวาดแบบ cover-fit ลงกรอบเดียวกัน — รูปที่
- * ถ่ายจากกล้องทุกช็อตสัดส่วนเท่ากันอยู่แล้วจึงไม่ถูกตัดเพิ่ม */
-const GIF_MAX_SIDE = 480;
+ * รูปละ 0.5 วินาที วนซ้ำจนครบประมาณ 7 วินาที (14 เฟรม) แล้วไฟล์
+ * วนลูปไม่รู้จบตอนเล่น — เฟรมแรกกำหนดขนาดภาพที่ความสูง 720px
+ * (720p: แนวตั้ง 3:4 ได้ 540x720, แนวนอน 16:9 ได้ 1280x720;
+ * รูปที่สูงไม่ถึง 720 อยู่แล้วไม่ขยายเพิ่มกันภาพเบลอกว่าเดิม)
+ * เฟรมถัดไปวาดแบบ cover-fit ลงกรอบเดียวกัน — รูปที่ถ่ายจาก
+ * กล้องทุกช็อตสัดส่วนเท่ากันอยู่แล้วจึงไม่ถูกตัดเพิ่ม */
+const GIF_HEIGHT = 720;
 const GIF_TOTAL_MS = 7000;
+const GIF_FRAME_MS = 500;
 
 function loadGifImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -1710,17 +1713,22 @@ export async function createPhotoGif(photoUrls: string[], filter: PhotoFilter): 
     frames.push(applyFilter(await loadGifImage(url), filter));
   }
   const first = frames[0];
-  const scale = Math.min(1, GIF_MAX_SIDE / Math.max(first.width, first.height));
+  // 720p = สูง 720px (ไม่ขยายรูปที่เล็กกว่านั้นอยู่แล้ว)
+  const scale = Math.min(1, GIF_HEIGHT / first.height);
   const frameW = Math.max(1, Math.round(first.width * scale));
   const frameH = Math.max(1, Math.round(first.height * scale));
   const gif = GIFEncoder();
-  const delay = Math.round(GIF_TOTAL_MS / frames.length);
+  // รูปละ 0.5 วินาที วนซ้ำจนครบ ~7 วินาที (14 เฟรม) — เฟรมที่เกิน
+  // จำนวนรูปจะวนกลับไปรูปแรกใหม่ (เช่น 3 รูป = 4 รอบ + รูปที่ 1-2)
+  const delay = GIF_FRAME_MS;
+  const totalFrames = Math.round(GIF_TOTAL_MS / GIF_FRAME_MS);
   const frameCanvas = document.createElement("canvas");
   frameCanvas.width = frameW;
   frameCanvas.height = frameH;
   const ctx = frameCanvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("no canvas context");
-  for (const frame of frames) {
+  for (let i = 0; i < totalFrames; i++) {
+    const frame = frames[i % frames.length];
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, frameW, frameH);
     const cover = Math.max(frameW / frame.width, frameH / frame.height);

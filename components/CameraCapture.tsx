@@ -212,7 +212,8 @@ export default function CameraCapture({ t, template, onDone, onBack }: Props) {
       <h2 className="text-lg font-medium text-gray-800">{t.cameraTitle} — {template.name}</h2>
       <p className="mt-1 text-sm text-gray-500">{t.cameraDesc}</p>
       <div className="relative mt-4 overflow-hidden rounded-3xl bg-gray-900 shadow-lg shadow-pink-100">
-        <div className="relative aspect-[4/3] w-full">
+        {/* กรอบพรีวิวสัดส่วนเท่าช่องรูปของช็อตที่จะถ่าย (เดิม fix 4:3 ไว้ เทมเพลตแนวตั้งจึงเห็นภาพแนวนอน แล้วแถบรูปครอปกลางภาพอีกที — video object-cover ครอปกลางเหมือน drawCover ของ composeStrip จึงเห็นตรงกับรูปที่จะได้พอดี; ถ่ายเก็บเต็มเฟรมเหมือนเดิมเผื่อครอปซ้ำจากรูปต้นฉบับได้) */}
+        <div className="relative w-full" style={{ aspectRatio: `${getCellAspect(template, photos.length)}` }}>
           <video ref={videoRef} playsInline muted autoPlay className="-scale-x-100 h-full w-full object-cover" />
           {!cameraReady && !cameraError && <div className="absolute inset-0 flex items-center justify-center bg-pink-50 text-sm text-pink-500">{t.cameraOpening}</div>}
           {cameraError && (

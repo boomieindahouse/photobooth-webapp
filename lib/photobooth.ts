@@ -1,3 +1,5 @@
+import { GIFEncoder, applyPalette, quantize } from "gifenc";
+
 export type TemplateCategory =
   | "minimal"
   | "dark"
@@ -1678,6 +1680,63 @@ function applyFilter(
   }
   ctx.putImageData(imageData, 0, 0);
   return canvas;
+}
+
+/** GIF จากรูปที่ถ่าย: ใช้ได้เฉพาะเทมเพลต 2 รูปขึ้นไป
+ * เรียงรูปที่ถ่าย (ผ่านฟิลเตอร์เดียวกับแถบรูป) เป็นเฟรมต่อเนื่อง
+ * วนลูปไม่รู้จบ รวมทั้งคลิปประมาณ 7 วินาที (แบ่งเวลาเท่า ๆ กันทุกเฟรม)
+ * เฟรมแรกกำหนดขนาดภาพ (ย่อด้านยาวสุดเหลือ 480px กันไฟล์ใหญ่และ
+ * เข้ารหัสช้า) เฟรมถัดไปวาดแบบ cover-fit ลงกรอบเดียวกัน — รูปที่
+ * ถ่ายจากกล้องทุกช็อตสัดส่วนเท่ากันอยู่แล้วจึงไม่ถูกตัดเพิ่ม */
+const GIF_MAX_SIDE = 480;
+const GIF_TOTAL_MS = 7000;
+
+function loadGifImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("failed to load photo"));
+    img.src = src;
+  });
+}
+
+export async function createPhotoGif(photoUrls: string[], filter: PhotoFilter): Promise<Blob> {
+  if (photoUrls.length < 2) {
+    throw new Error("GIF needs at least 2 photos");
+  }
+  // ผ่านฟิลเตอร์เดียวกับแถบรูปก่อน — GIF จะได้โทนเดียวกับรูปที่เห็น
+  const frames: HTMLCanvasElement[] = [];
+  for (const url of photoUrls) {
+    frames.push(applyFilter(await loadGifImage(url), filter));
+  }
+  const first = frames[0];
+  const scale = Math.min(1, GIF_MAX_SIDE / Math.max(first.width, first.height));
+  const frameW = Math.max(1, Math.round(first.width * scale));
+  const frameH = Math.max(1, Math.round(first.height * scale));
+  const gif = GIFEncoder();
+  const delay = Math.round(GIF_TOTAL_MS / frames.length);
+  const frameCanvas = document.createElement("canvas");
+  frameCanvas.width = frameW;
+  frameCanvas.height = frameH;
+  const ctx = frameCanvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new Error("no canvas context");
+  for (const frame of frames) {
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, frameW, frameH);
+    const cover = Math.max(frameW / frame.width, frameH / frame.height);
+    const dw = frame.width * cover;
+    const dh = frame.height * cover;
+    ctx.drawImage(frame, (frameW - dw) / 2, (frameH - dh) / 2, dw, dh);
+    const rgba = ctx.getImageData(0, 0, frameW, frameH).data;
+    // GIF เก็บได้สูงสุด 256 สีต่อเฟรม — quantize แยกกันทีละเฟรม
+    const palette = quantize(rgba, 256);
+    const index = applyPalette(rgba, palette);
+    // repeat: 0 = วนลูปไม่รู้จบ (เขียน NETSCAPE2.0 ไว้ที่เฟรมแรก)
+    gif.writeFrame(index, frameW, frameH, { palette, delay, repeat: 0 });
+  }
+  gif.finish();
+  const bytes = gif.bytes();
+  return new Blob([bytes.buffer as ArrayBuffer], { type: "image/gif" });
 }
 
 /** สติกเกอร์: x/y เป็นสัดส่วน 0-1 ของภาพ, size เป็น px ในพิกัดภาพ

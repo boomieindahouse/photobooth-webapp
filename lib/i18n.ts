@@ -47,6 +47,9 @@ export interface Dict {
   tabStickers: string;
   download: string;
   share: string;
+  downloadGif: string;
+  creatingGif: string;
+  gifError: string;
   shareFallback: string;
   shareText: string;
   saveToPhotosHint: string;
@@ -145,6 +148,9 @@ export const translations: Record<Language, Dict> = {
     tabStickers: "Stickers",
     download: "Download photo (PNG)",
     share: "↗ Share photo",
+    downloadGif: "🎞️ Download GIF",
+    creatingGif: "Creating GIF…",
+    gifError: "Couldn't create the GIF, please try again.",
     shareFallback: "This device can't share files directly, so I downloaded the photo for you instead.",
     shareText: "Our photobooth photo ♡",
     saveToPhotosHint:
@@ -319,6 +325,9 @@ export const translations: Record<Language, Dict> = {
     tabStickers: "สติกเกอร์",
     download: "ดาวน์โหลดรูป (PNG)",
     share: "↗ แชร์รูป",
+    downloadGif: "🎞️ ดาวน์โหลด GIF",
+    creatingGif: "กำลังสร้าง GIF…",
+    gifError: "สร้าง GIF ไม่สำเร็จ ลองใหม่อีกครั้ง",
     shareFallback: "อุปกรณ์นี้แชร์ไฟล์ตรง ๆ ไม่ได้ เลยดาวน์โหลดรูปให้แทนแล้ว",
     shareText: "รูปโฟโต้บูธของเรา ♡",
     saveToPhotosHint:

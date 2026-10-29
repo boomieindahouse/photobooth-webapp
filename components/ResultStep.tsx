@@ -6,6 +6,7 @@ import {
   FILTERS,
   FRAME_COLORS,
   composeStrip,
+  createPhotoGif,
   frameById,
   getTextAnchor,
   getTextWrapWidth,
@@ -118,6 +119,9 @@ export default function ResultStep({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewComposing, setPreviewComposing] = useState(true);
   const [exportComposing, setExportComposing] = useState(false);
+  // GIF: มีปุ่มเฉพาะเทมเพลต 2 รูปขึ้นไป (รูปเดียวทำคลิปวนลูปไม่ได้)
+  const canMakeGif = photos.length >= 2;
+  const [gifComposing, setGifComposing] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   // ข้อความบนรูป — ทุกเทมเพลตเปลี่ยนได้:
   // โพลารอยด์เริ่มว่าง (เว้นช่องว่างไว้), เทมเพลตอื่นเริ่มที่ "photobooth" แบบเดิม
@@ -622,6 +626,72 @@ export default function ResultStep({
       download();
     } finally {
       setExportComposing(false);
+    }
+  };
+
+  // ดาวน์โหลด GIF: เรียงรูปที่ถ่ายวนลูป ~7 วินาที — แพตเทิร์นเดียวกับ
+  // download() (iOS เปิด Share Sheet ก่อน, เดสก์ท็อปดาวน์โหลดตรง)
+  const downloadGif = async () => {
+    if (gifComposing || !canMakeGif) return;
+    setShareMessage(null);
+    let pendingTab: Window | null = null;
+    if (isIOS) {
+      try {
+        pendingTab = window.open("", "_blank");
+      } catch {
+        pendingTab = null;
+      }
+    }
+    setGifComposing(true);
+    try {
+      const blob = await createPhotoGif(photos, filter);
+      if (isIOS) {
+        const file = new File([blob], `photobooth-${template.id}.gif`, {
+          type: "image/gif",
+        });
+        if (
+          typeof navigator.share === "function" &&
+          (!navigator.canShare || navigator.canShare({ files: [file] }))
+        ) {
+          try {
+            await navigator.share({
+              title: "Photobooth",
+              text: t.shareText,
+              files: [file],
+            });
+            if (pendingTab && !pendingTab.closed) pendingTab.close();
+            return;
+          } catch (err) {
+            if (err instanceof Error && err.name === "AbortError") {
+              if (pendingTab && !pendingTab.closed) pendingTab.close();
+              return;
+            }
+            // Share ใช้ไม่ได้ด้วยเหตุอื่น — ตกไปใช้วิธีเปิดแท็บแทน
+          }
+        }
+        const url = URL.createObjectURL(blob);
+        if (pendingTab && !pendingTab.closed) {
+          pendingTab.location.href = url;
+        } else {
+          window.open(url, "_blank");
+        }
+        setShareMessage(t.saveToPhotosHint);
+        setTimeout(() => URL.revokeObjectURL(url), 300000);
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `photobooth-${template.id}.gif`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setShareMessage(t.gifError);
+      if (pendingTab && !pendingTab.closed) pendingTab.close();
+    } finally {
+      setGifComposing(false);
     }
   };
 
@@ -1329,6 +1399,16 @@ export default function ResultStep({
         >
           {t.share}
         </button>
+        {canMakeGif && (
+          <button
+            type="button"
+            onClick={downloadGif}
+            disabled={gifComposing}
+            className="w-full whitespace-nowrap rounded-full bg-pink-400 py-3.5 text-sm font-medium text-white shadow-lg shadow-pink-200 transition hover:bg-pink-500 disabled:opacity-40"
+          >
+            {gifComposing ? t.creatingGif : t.downloadGif}
+          </button>
+        )}
         {shareMessage && (
           <p className="text-center text-sm text-gray-500">{shareMessage}</p>
         )}
